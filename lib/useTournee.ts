@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
+import { avecAttente, enAttente, surChangement, surConfirmation, vider } from "./fileAttente";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 import type { Config, Equipe, Rue, Secteur } from "./types";
@@ -40,19 +42,25 @@ export interface Donnees {
   secteurs: Secteur[];
   rues: Rue[];
   enLigne: boolean;
+  /** Nombre de saisies gardées sur ce téléphone en attente de réseau. */
+  attente: number;
 }
+
+const rienEnAttente = () => AUCUNE;
+const AUCUNE: ReturnType<typeof enAttente> = [];
 
 const TABLES = ["config", "equipes", "secteurs", "rues"] as const;
 type Table = (typeof TABLES)[number];
 
 /** Charge toute la tournée et la garde à jour en temps réel. */
 export function useTournee(actif: boolean): Donnees {
-  const [d, setD] = useState<Donnees>({ pret: false, config: null, equipes: [], secteurs: [], rues: [], enLigne: true });
+  const [d, setD] = useState<Omit<Donnees, "attente">>({ pret: false, config: null, equipes: [], secteurs: [], rues: [], enLigne: true });
+  const file = useSyncExternalStore(surChangement, enAttente, rienEnAttente);
   const attente = useRef(new Set<Table>());
   const minuteur = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const charger = useCallback(async (tables: Iterable<Table>) => {
-    const maj: Partial<Donnees> = {};
+    const maj: Partial<Omit<Donnees, "attente">> = {};
     await Promise.all(
       [...tables].map(async (t) => {
         if (t === "config") {
@@ -71,8 +79,7 @@ export function useTournee(actif: boolean): Donnees {
           if (data) maj.secteurs = data as Secteur[];
         } else {
           const { data } = await supabase.from("rues").select("*").order("ordre").limit(5000);
-          if (data)
-            maj.rues = (data as Rue[]).map((r) => ({ ...r, especes: Number(r.especes), cheques: Number(r.cheques) }));
+          if (data) maj.rues = (data as Rue[]).map(normaliser);
         }
       }),
     );
@@ -91,27 +98,60 @@ export function useTournee(actif: boolean): Donnees {
         charger(ts);
       }, 250);
     };
+    // Les rues changent souvent : on applique directement la ligne reçue au lieu de tout
+    // recharger (économise les données mobiles). Les autres tables, petites, sont rechargées.
+    const surRue = (m: RealtimePostgresChangesPayload<Rue>) => {
+      setD((p) => {
+        if (m.eventType === "DELETE") {
+          const id = (m.old as Partial<Rue>).id;
+          return { ...p, rues: p.rues.filter((r) => r.id !== id) };
+        }
+        const nouv = m.new as Rue;
+        const i = p.rues.findIndex((r) => r.id === nouv.id);
+        // Les grosses colonnes inchangées (tracé) peuvent être absentes du message : on garde l'ancienne valeur.
+        const fusion = normaliser({ ...(i >= 0 ? p.rues[i] : ({} as Rue)), ...Object.fromEntries(Object.entries(nouv).filter(([, v]) => v !== undefined)) } as Rue);
+        const rues = i >= 0 ? p.rues.map((r, j) => (j === i ? fusion : r)) : [...p.rues, fusion].sort((a, b) => a.ordre - b.ordre);
+        return { ...p, rues };
+      });
+    };
     let ch = supabase.channel("tournee");
-    for (const t of TABLES) ch = ch.on("postgres_changes", { event: "*", schema: "public", table: t }, () => planifier(t));
+    for (const t of TABLES)
+      ch = t === "rues"
+        ? ch.on<Rue>("postgres_changes", { event: "*", schema: "public", table: "rues" }, surRue)
+        : ch.on("postgres_changes", { event: "*", schema: "public", table: t }, () => planifier(t));
     ch.subscribe((status) => {
       if (status === "SUBSCRIBED") {
         setD((p) => ({ ...p, enLigne: true }));
         charger(TABLES); // rattrape ce qui a pu être manqué pendant une coupure
+        vider();
       } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
         setD((p) => ({ ...p, enLigne: false }));
       }
     });
-    const reveil = () => document.visibilityState === "visible" && charger(TABLES);
+    const reveil = () => { if (document.visibilityState === "visible") { charger(TABLES); vider(); } };
+    const reseau = () => { vider(); charger(TABLES); };
+    const relance = setInterval(vider, 20000);
+    // Notation acceptée par le serveur : on l'intègre tout de suite, sans attendre le temps réel.
+    const finConfirm = surConfirmation((id, n) =>
+      setD((p) => ({ ...p, rues: p.rues.map((r) => (r.id === id ? { ...r, ...n, repasse: r.repasse || n.etat === "arepasser", maj_a: new Date().toISOString() } : r)) })));
     document.addEventListener("visibilitychange", reveil);
+    window.addEventListener("online", reseau);
+    vider();
     return () => {
       document.removeEventListener("visibilitychange", reveil);
+      window.removeEventListener("online", reseau);
+      clearInterval(relance);
+      finConfirm();
       if (minuteur.current) clearTimeout(minuteur.current);
       supabase.removeChannel(ch);
     };
   }, [actif, charger]);
 
-  return d;
+  const rues = useMemo(() => avecAttente(d.rues), [d.rues, file]); // eslint-disable-line react-hooks/exhaustive-deps
+  return { ...d, rues, attente: file.length };
 }
+
+const normaliser = (r: Rue): Rue => ({ ...r, especes: Number(r.especes), cheques: Number(r.cheques) });
 
 /** Force un re-rendu périodique pour que les « il y a X min » restent justes. */
 export function useHorloge(ms = 30000) {

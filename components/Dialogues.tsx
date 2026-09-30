@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { ruesDansZone } from "@/lib/osm";
+import { noterRue } from "@/lib/fileAttente";
 import { eur, ilya, messageErreur, montant } from "@/lib/format";
 import { agreger, avancement, distance, prixMoyen } from "@/lib/agregats";
 import { COULEURS, ETATS, type Config, type Equipe, type Etat, type Historique, type LngLat, type Rue, type Secteur } from "@/lib/types";
@@ -51,13 +52,14 @@ export function DialogueRue({ rue, secteur, ruesSecteur, equipes, onClose }: {
   const nomEquipe = (id: string | null) => equipes.find((e) => e.id === id)?.nom ?? "admin";
 
   const enregistrer = async () => {
-    const ok = await ecrire(() => supabase.rpc("noter_rue", {
-      p_rue: rue.id, p_etat: etat, p_arret: arret.trim(), p_note: note.trim(),
-      p_vendus: Math.round(montant(vendus)), p_especes: montant(especes), p_cheques: montant(cheques),
-    }));
-    if (ok && faitesApres !== faitesAvant)
-      toast(`${libelle(secteur.nom)} : ${pctApres} % fait (${faitesApres}/${total} rues)`);
-    return ok;
+    const r = await noterRue(rue.id, {
+      etat, arret: arret.trim().slice(0, 80), note: note.trim().slice(0, 300),
+      vendus: Math.round(montant(vendus)), especes: montant(especes), cheques: montant(cheques),
+    });
+    if (typeof r === "object") { toast(messageErreur(r.erreur)); return false; }
+    if (r === "attente") toast("Pas de réseau : saisie gardée sur le téléphone, envoi automatique au retour du réseau");
+    else if (faitesApres !== faitesAvant) toast(`${libelle(secteur.nom)} : ${pctApres} % fait (${faitesApres}/${total} rues)`);
+    return true;
   };
 
   return (

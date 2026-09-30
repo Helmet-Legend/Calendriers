@@ -54,6 +54,8 @@ export interface Rue {
   maj_a: string | null;
   /** Tracé OpenStreetMap : null = pas encore cherché, [] = introuvable. */
   trace: LngLat[][] | null;
+  /** Saisie faite sur ce téléphone, pas encore reçue par le serveur. */
+  enAttente?: boolean;
 }
 
 export interface Historique {

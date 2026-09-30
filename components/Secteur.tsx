@@ -8,13 +8,20 @@ import { Epingle, Progression } from "./ui";
 
 export interface ActionsSecteur {
   ouvrirRue?: (r: Rue) => void;
+  marquerFaite?: (r: Rue) => void;
   ajouterRue?: (s: Secteur) => void;
   modifier?: (s: Secteur) => void;
   redessiner?: (s: Secteur) => void;
   supprimer?: (s: Secteur) => void;
 }
 
-function ListeRues({ rues, ville, onRue }: { rues: Rue[]; ville: string; onRue?: (r: Rue) => void }) {
+const Coche = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M5 12.5l4.5 4.5L19 7.5" />
+  </svg>
+);
+
+function ListeRues({ rues, ville, onRue, onFaite }: { rues: Rue[]; ville: string; onRue?: (r: Rue) => void; onFaite?: (r: Rue) => void }) {
   if (!rues.length) return <p className="hint">Aucune rue pour ce secteur.</p>;
   return (
     <ul className="streets">
@@ -30,6 +37,7 @@ function ListeRues({ rues, ville, onRue }: { rues: Rue[]; ville: string; onRue?:
             <span className="n">
               {r.nom}
               {info && <small>{info}</small>}
+              {r.enAttente && <small className="en-attente">en attente d&apos;envoi</small>}
             </span>
             <span className="fig">
               {r.vendus ? `${r.vendus} cal.` : ""}
@@ -40,6 +48,14 @@ function ListeRues({ rues, ville, onRue }: { rues: Rue[]; ville: string; onRue?:
                 </>
               ) : null}
             </span>
+            {onFaite && (r.etat === "faite" ? (
+              <span className="coche faite" title="Rue faite" aria-hidden="true"><Coche /></span>
+            ) : (
+              <button type="button" className="coche" aria-label={`Marquer ${r.nom} comme faite`} title="Marquer comme faite"
+                onClick={(e) => { e.stopPropagation(); onFaite(r); }}>
+                <Coche />
+              </button>
+            ))}
             <a className="go" href={lienMaps(r.nom, ville)} target="_blank" rel="noopener" aria-label={`Voir ${r.nom} dans Maps`}
               onClick={(e) => e.stopPropagation()}>
               <Epingle />
@@ -85,7 +101,7 @@ export function BlocSecteur({
         <span><strong>{eur(a.somme)}</strong> récoltés</span>
       </div>
       <Progression a={a} />
-      <ListeRues rues={rues} ville={ville} onRue={actions.ouvrirRue} />
+      <ListeRues rues={rues} ville={ville} onRue={actions.ouvrirRue} onFaite={actions.marquerFaite} />
       <div className="bar">
         {actions.ajouterRue && (
           <button className="btn small" onClick={() => actions.ajouterRue!(secteur)}>

@@ -167,12 +167,18 @@ button, input, textarea, select { font: inherit; color: inherit }
 .chip.encours { background: var(--signal); border-color: var(--signal); color: var(--ink) }
 .chip.faite { background: #1E8A4C; border-color: #1E8A4C; color: #fff }
 .chip.arepasser { background: #B8561A; border-color: #B8561A; color: #fff }
+.coche { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 10px; border: 2px solid #1E8A4C;
+  background: #fff; color: #1E8A4C; cursor: pointer; padding: 0 }
+.coche:hover { background: #EEF6F1 }
+.coche.faite { background: #1E8A4C; color: #fff; cursor: default }
+.streets .n small.en-attente { color: #8A5A00; font-weight: 600 }
 .go { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--line); color: var(--ink) }
 .sector-title { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 14px }
 .sector-title:first-child { margin-top: 0 }
 .empty { background: var(--surface); border: 1px dashed var(--line); border-radius: 16px; padding: 24px 18px; text-align: center; color: var(--muted) }
 .empty strong { display: block; color: var(--ink); font-size: 1.05rem; margin-bottom: 4px }
 .horsligne { background: var(--danger); color: #fff; border-radius: 12px; padding: 10px 14px; font-weight: 600 }
+.attente { background: #FFF4D6; border: 1px solid var(--signal); color: var(--ink); border-radius: 12px; padding: 10px 14px; font-weight: 600 }
 .titre-section { display: flex; align-items: center; gap: 12px; margin-top: 10px }
 .titre-section h2 { flex-grow: 1 }
 
@@ -207,7 +213,7 @@ input, textarea, select { background: var(--surface); border: 1px solid var(--li
 .liste-admins { list-style: none; margin: 0; padding: 0 }
 .liste-admins li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--track) }
 .toast { position: fixed; inset: auto; margin: 0; border: 0; overflow: visible; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--navy);
-  color: #fff; padding: 10px 16px; border-radius: 10px; font-weight: 600; z-index: 10; max-width: 90vw }
+  color: #fff; padding: 10px 16px; border-radius: 10px; font-weight: 600; z-index: 10; width: max-content; max-width: min(90vw, 520px); text-align: center }
 
 /* ---------- écrans moyens et téléphones */
 @media (max-width: 1280px) {

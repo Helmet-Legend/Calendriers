@@ -3,6 +3,8 @@
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { cleNom, ruesOsm } from "@/lib/osm";
+import { noterRue } from "@/lib/fileAttente";
+import { messageErreur } from "@/lib/format";
 import { supabase } from "@/lib/supabase";
 import { agreger, argentEquipe, argentTotal, avancement, prixMoyen, ruesDe } from "@/lib/agregats";
 import { eur, ilya } from "@/lib/format";
@@ -11,7 +13,8 @@ import { GRIS, type Config, type Equipe, type LngLat, type Rue, type Secteur } f
 import { Chevron } from "./icones";
 import { BlocSecteur, ResumeSecteur, type ActionsSecteur } from "./Secteur";
 import { DialogueAjoutRue, DialogueEquipe, DialogueFinale, DialogueRue, DialogueSecteur, ecrire } from "./Dialogues";
-import { Kpis, Progression as Barre } from "./ui";
+import { Kpis, Modal, Progression as Barre, toast } from "./ui";
+import { exporterRecap, exporterRues } from "@/lib/export";
 import { libelle, pastille } from "./Carte";
 
 const Carte = dynamic(() => import("./Carte"), { ssr: false, loading: () => <div className="carte" /> });
@@ -38,7 +41,13 @@ function useActions(d: Donnees, admin: boolean, peutNoter: (s: Secteur) => boole
   const ruesDu = (id: string) => ruesPar.get(id) ?? [];
 
   const actions = (s: Secteur): ActionsSecteur => ({
-    ...(peutNoter(s) ? { ouvrirRue: (rue: Rue) => setDialogue({ t: "rue", rue }), ajouterRue: (secteur: Secteur) => setDialogue({ t: "ajout-rue", secteur }) } : {}),
+    ...(peutNoter(s)
+      ? {
+          ouvrirRue: (rue: Rue) => setDialogue({ t: "rue", rue }),
+          marquerFaite: (rue: Rue) => marquerFaite(s, rue),
+          ajouterRue: (secteur: Secteur) => setDialogue({ t: "ajout-rue", secteur }),
+        }
+      : {}),
     ...(admin
       ? {
           modifier: (secteur: Secteur) => setDialogue({ t: "secteur", secteur }),
@@ -51,6 +60,16 @@ function useActions(d: Donnees, admin: boolean, peutNoter: (s: Secteur) => boole
         }
       : {}),
   });
+
+  /** Un appui sur ✓ : la rue passe « faite », le reste de sa fiche est conservé. */
+  const marquerFaite = async (s: Secteur, rue: Rue) => {
+    const rs = ruesDu(s.id);
+    const apres = avancement(rs, (r) => (r.id === rue.id ? "faite" : r.etat));
+    const res = await noterRue(rue.id, { etat: "faite", arret: rue.arret, note: rue.note, vendus: rue.vendus, especes: rue.especes, cheques: rue.cheques });
+    if (typeof res === "object") toast(messageErreur(res.erreur));
+    else if (res === "attente") toast(`${rue.nom} : faite (gardée sur le téléphone, envoi au retour du réseau)`);
+    else toast(`${rue.nom} faite · ${libelle(s.nom)} : ${apres.pct} %`);
+  };
 
   const onDessin = async (contour: LngLat[], id: string | null) => {
     if (id) {
@@ -174,6 +193,7 @@ export function VueEnsemble({ d, config, dessinDemande, onDessinActif }: {
   d: Donnees; config: Config; dessinDemande: number; onDessinActif: (actif: boolean) => void;
 }) {
   const [ouvertes, setOuvertes] = useState<Set<string>>(new Set());
+  const [exporter, setExport] = useState(false);
   const a = useActions(d, true, () => true);
   useTraces(d);
   const total = agreger(d.rues);
@@ -214,8 +234,26 @@ export function VueEnsemble({ d, config, dessinDemande, onDessinActif }: {
 
       <div className="titre-section" id="equipes">
         <h2>Équipes</h2>
+        <button className="btn" onClick={() => setExport(true)}>Exporter les résultats</button>
         <button className="btn primary" onClick={() => a.setDialogue({ t: "equipe", equipe: null })}>Nouvelle équipe</button>
       </div>
+      {exporter && (
+        <Modal onClose={() => setExport(false)}>
+          <h2>Exporter les résultats</h2>
+          <p className="hint" style={{ margin: "6px 0 14px" }}>Fichiers à ouvrir avec Excel, LibreOffice ou Google Sheets.</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <button type="button" className="btn primary" style={{ justifyContent: "center", minHeight: 48 }}
+              onClick={() => exporterRecap(config, d.equipes, d.secteurs, d.rues)}>
+              Récapitulatif par équipe et par secteur
+            </button>
+            <button type="button" className="btn" style={{ justifyContent: "center", minHeight: 48 }}
+              onClick={() => exporterRues(config, d.equipes, d.secteurs, d.rues)}>
+              Détail rue par rue
+            </button>
+          </div>
+          <div className="row"><button type="button" className="btn" onClick={() => setExport(false)}>Fermer</button></div>
+        </Modal>
+      )}
       {!d.equipes.length && (
         <div className="empty">
           <strong>Aucune équipe</strong>Créez vos binômes et trinômes avec leur nombre de calendriers au départ, puis envoyez-leur leur lien.

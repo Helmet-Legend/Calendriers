@@ -60,6 +60,11 @@ export function Cadre({
         </header>
         <main className="contenu">
           {d?.pret && !d.enLigne && <div className="horsligne">Connexion perdue : les chiffres affichés ne sont peut-être plus à jour.</div>}
+          {d && d.attente > 0 && (
+            <div className="attente" role="status">
+              {d.attente} saisie{d.attente > 1 ? "s" : ""} gardée{d.attente > 1 ? "s" : ""} sur ce téléphone, envoi automatique dès le retour du réseau.
+            </div>
+          )}
           {etroit ? <div className="etroit" style={{ display: "flex", flexDirection: "column", gap: 16 }}>{children}</div> : children}
         </main>
       </div>
