@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { ruesDansZone } from "@/lib/osm";
 import { eur, ilya, messageErreur, montant } from "@/lib/format";
 import { COULEURS, ETATS, type Config, type Equipe, type Etat, type Historique, type LngLat, type Rue, type Secteur } from "@/lib/types";
 import { Boutons, Modal, toast } from "./ui";
@@ -201,6 +202,31 @@ export function DialogueSecteur({
   const [nom, setNom] = useState(secteur?.nom ?? "");
   const [equipeId, setEquipeId] = useState(secteur?.equipe_id ?? "");
   const [liste, setListe] = useState(rues.map((r) => r.nom).join("\n"));
+  const [recherche, setRecherche] = useState(false);
+  const zone = contour ?? secteur?.contour ?? [];
+
+  const remplir = async () => {
+    if (zone.length < 3 || recherche) return;
+    setRecherche(true);
+    try {
+      const trouvees = await ruesDansZone(zone);
+      const actuelles = liste.split("\n").map((x) => x.trim()).filter(Boolean);
+      const connues = new Set(actuelles.map((x) => x.toLowerCase()));
+      const ajout = trouvees.filter((n) => !connues.has(n.toLowerCase()));
+      setListe([...actuelles, ...ajout].join("\n"));
+      toast(ajout.length ? `${ajout.length} rue${ajout.length > 1 ? "s" : ""} ajoutée${ajout.length > 1 ? "s" : ""} depuis la carte` : "Aucune nouvelle rue trouvée dans la zone");
+    } catch {
+      toast("Impossible de récupérer les rues, réessayez");
+    } finally {
+      setRecherche(false);
+    }
+  };
+
+  // Nouveau secteur dessiné : on pré-remplit directement la liste.
+  useEffect(() => {
+    if (!secteur && contour && contour.length >= 3) remplir();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const enregistrer = async () => {
     if (!nom.trim()) return false;
@@ -249,7 +275,16 @@ export function DialogueSecteur({
         {equipes.map((e) => <option key={e.id} value={e.id}>{e.nom}</option>)}
       </select>
       <label htmlFor="f-rues">Rues du secteur <span className="hint">une par ligne</span></label>
-      <textarea id="f-rues" rows={8} placeholder={"Rue Victor Hugo\nAvenue Jean Jaurès\nImpasse des Lilas"} value={liste} onChange={(e) => setListe(e.target.value)} />
+      {zone.length >= 3 && (
+        <div className="bar" style={{ marginTop: 0 }}>
+          <button type="button" className="btn small" onClick={remplir} disabled={recherche}>
+            {recherche ? "Recherche des rues…" : "Remplir depuis la carte"}
+          </button>
+          <span className="hint">ajoute les rues de la zone, vérifiez ensuite la liste</span>
+        </div>
+      )}
+      <textarea id="f-rues" rows={10} placeholder={"Rue Victor Hugo\nAvenue Jean Jaurès\nImpasse des Lilas"} value={liste} onChange={(e) => setListe(e.target.value)} />
+      <p className="hint">Rues d&apos;OpenStreetMap ayant au moins un bout dans la zone : retirez celles qui ne font que la longer.</p>
       {secteur && <p className="hint">Retirer une rue de la liste efface aussi ce qui a été noté pour elle.</p>}
       <Boutons valider={secteur ? "Enregistrer" : "Créer le secteur"} onClose={onClose} />
     </Modal>
