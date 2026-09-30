@@ -1,0 +1,100 @@
+:root {
+  --bg: #E9EDF1; --surface: #FFFFFF; --ink: #15233A; --muted: #617085; --line: #CBD3DC;
+  --signal: #F2C230; --done: #2E8B57; --redo: #E07B24; --danger: #B23A3A;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #101826; --surface: #1A2536; --ink: #E8EDF4; --muted: #93A1B5; --line: #2C3A50;
+    --done: #4CB47C; --redo: #F0934A; --danger: #E07070; color-scheme: dark; }
+}
+*, *::before, *::after { box-sizing: border-box }
+html { scroll-padding-top: env(safe-area-inset-top, 0px) }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 var(--font-barlow), system-ui, -apple-system, "Segoe UI", sans-serif;
+  padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px) }
+.wrap { max-width: 820px; margin: 0 auto; padding: 20px 14px 60px }
+h1, h2, h3, .num { font-family: var(--font-barlow-condensed), "Arial Narrow", system-ui, sans-serif; font-weight: 700; letter-spacing: .01em; margin: 0 }
+h1 { font-size: 2rem; line-height: 1.1 }
+h2 { font-size: 1.4rem; line-height: 1.2 }
+h3 { font-size: 1.15rem }
+.sub { color: var(--muted); margin: 4px 0 16px }
+button, input, textarea, select { font: inherit; color: inherit }
+:focus-visible { outline: 3px solid var(--signal); outline-offset: 2px }
+.entete { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px }
+.tabs { display: flex; gap: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 4px; margin-bottom: 16px }
+.tabs button { flex: 1; border: 0; background: none; color: var(--muted); font-weight: 600; padding: 10px; border-radius: 9px; cursor: pointer }
+.tabs button[aria-selected="true"] { background: var(--ink); color: var(--bg) }
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 8px 14px; cursor: pointer; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 6px }
+.btn:disabled { opacity: .5; cursor: default }
+.btn.primary { background: var(--signal); border-color: var(--signal); color: #15233A }
+.btn.danger { color: var(--danger) }
+.btn.small { padding: 5px 10px; font-size: .9rem }
+.btn.lien { border: 0; background: none; padding: 4px 0; color: var(--muted); text-decoration: underline }
+.bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 10px 0 }
+.bar .grow { flex: 1 }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; margin-bottom: 12px }
+.hero { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; margin-bottom: 6px }
+.hero .num { font-size: 2.8rem; line-height: 1 }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin: 10px 0 16px }
+.kpi { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px }
+.kpi b { display: block; font-family: var(--font-barlow-condensed), sans-serif; font-size: 1.6rem; line-height: 1.1 }
+.kpi span { color: var(--muted); font-size: .88rem }
+.muted { color: var(--muted) }
+.hint { color: var(--muted); font-size: .9rem; font-weight: 400 }
+.horsligne { background: var(--danger); color: #fff; border-radius: 10px; padding: 8px 12px; font-weight: 600; margin-bottom: 12px }
+/* carte */
+.carte { position: relative; height: min(62vh, 560px); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: var(--surface) }
+.carte.dessin { outline: 3px solid var(--signal) }
+.carte > div { position: absolute; inset: 0 }
+.carte .mapboxgl-canvas { outline: none }
+.drawhint { background: var(--signal); color: #15233A; border-radius: 10px; padding: 8px 12px; font-weight: 600; margin-top: 10px }
+/* équipes & rues */
+.team-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; cursor: pointer }
+.swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: middle }
+.line { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .92rem; color: var(--muted); margin-top: 6px }
+.line strong { color: var(--ink); font-weight: 600 }
+.progress { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; margin-top: 10px; display: flex }
+.progress i { display: block; height: 100% }
+.streets { list-style: none; margin: 10px 0 0; padding: 0; border-top: 1px solid var(--line) }
+.streets li { display: flex; align-items: center; gap: 10px; padding: 10px 2px; border-bottom: 1px solid var(--line) }
+.streets li:last-child { border-bottom: 0 }
+.streets li.tap { cursor: pointer }
+.streets .n { flex: 1; min-width: 0 }
+.streets .n small { display: block; color: var(--muted); font-size: .85rem }
+.streets .fig { text-align: right; font-size: .9rem; white-space: nowrap }
+.chip { flex: none; font-size: .78rem; font-weight: 600; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap }
+.chip.encours { background: var(--signal); border-color: var(--signal); color: #15233A }
+.chip.faite { background: var(--done); border-color: var(--done); color: #fff }
+.chip.arepasser { background: var(--redo); border-color: var(--redo); color: #fff }
+.go { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 9px; border: 1px solid var(--line); color: var(--ink) }
+.go svg { width: 17px; height: 17px }
+.sector-title { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 14px }
+.empty { background: var(--surface); border: 1px dashed var(--line); border-radius: 14px; padding: 24px 18px; text-align: center; color: var(--muted); margin-bottom: 12px }
+.empty strong { display: block; color: var(--ink); font-size: 1.05rem; margin-bottom: 4px }
+/* dialogue */
+dialog { border: 0; border-radius: 16px; padding: 0; background: var(--surface); color: var(--ink); width: min(520px, 94vw); max-height: 90vh }
+dialog::backdrop { background: rgba(10, 18, 30, .55) }
+dialog form { padding: 20px }
+label { display: block; font-weight: 600; margin: 14px 0 6px }
+input, textarea, select { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; width: 100% }
+.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 6px }
+.seg label { margin: 0; font-weight: 600; border: 1px solid var(--line); border-radius: 10px; padding: 10px; text-align: center; cursor: pointer }
+.seg input { position: absolute; opacity: 0; width: 1px; height: 1px }
+.seg label:has(input:checked) { background: var(--ink); color: var(--bg); border-color: var(--ink) }
+.duo { display: grid; grid-template-columns: 1fr 1fr; gap: 8px }
+.duo label { margin-top: 14px }
+.stepper { display: flex; gap: 6px }
+.stepper button { width: 52px; flex: none; border: 1px solid var(--line); background: var(--bg); border-radius: 10px; font-size: 1.4rem; font-weight: 600; cursor: pointer }
+.stepper input { text-align: center; font-size: 1.2rem; font-weight: 600 }
+.colors { display: flex; gap: 8px; flex-wrap: wrap }
+.colors label { margin: 0; width: 34px; height: 34px; border-radius: 50%; cursor: pointer; border: 3px solid transparent }
+.colors input { position: absolute; opacity: 0; width: 1px; height: 1px }
+.colors label:has(input:checked) { border-color: var(--ink) }
+.row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; flex-wrap: wrap }
+.row .left { margin-right: auto }
+.copie { display: flex; gap: 6px }
+.copie input { font-size: .85rem }
+.histo { list-style: none; margin: 6px 0 0; padding: 0; font-size: .88rem; color: var(--muted) }
+.histo li { padding: 4px 0; border-top: 1px solid var(--line) }
+.liste-admins { list-style: none; margin: 0; padding: 0 }
+.liste-admins li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line) }
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-weight: 600; z-index: 10; max-width: 90vw }

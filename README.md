@@ -1,45 +1,69 @@
 # Tournée des calendriers
 
-Application de suivi en temps réel d'une tournée de vente de calendriers (type pompiers/associatif) par plusieurs binômes/trinômes, avec vue d'ensemble pour les admins.
+Application de suivi en temps réel d'une tournée de vente de calendriers (type pompiers/associatif) par plusieurs binômes/trinômes, avec vue d'ensemble pour les responsables.
 
-## État actuel : prototype `index.html`
+**Stack** : Next.js (App Router) · Supabase (Postgres, Auth, Realtime) · Mapbox GL · déploiement Vercel.
 
-Prototype fonctionnel conçu pour l'environnement « Artifact » de claude.ai : une seule page HTML, sans backend propre, qui utilise l'API `window.claude.use(...)` (`db`, `user`, `assets`). **Il ne tourne pas tel quel hors de claude.ai** : il faut soit continuer à l'y héberger, soit le réécrire avec un vrai backend.
+## Fonctionnement
 
-### Fonctionnalités
+- **Responsables (admins)** : connexion par lien magique envoyé par e-mail. Le **premier compte qui se connecte devient admin**, puis ajoute les autres depuis « Réglages ».
+- **Équipes** : chaque équipe a un **lien secret** (`/e/<jeton>`) à envoyer par SMS/WhatsApp. En l'ouvrant, le téléphone est connecté anonymement et rattaché à l'équipe. Il ne peut noter que les rues **de ses propres secteurs**, et c'est vérifié côté base (RLS), pas seulement dans l'interface. « Créer un nouveau lien » invalide l'ancien et déconnecte les téléphones.
+- **Carte** : fond Mapbox réel, secteurs dessinés en polygones GPS (touchez la carte pour poser chaque coin), géolocalisation du téléphone, cadrage automatique sur les secteurs de l'équipe.
+- **Suivi par rue** : état (à faire / commencée / faite / à repasser), point d'arrêt, note de repasse, calendriers vendus, **espèces et chèques séparés**.
+- **Historique** : chaque modification d'une rue est journalisée (table `historique`) et visible dans la fiche de la rue.
+- **Temps réel** : tous les écrans se mettent à jour via Supabase Realtime, avec un rattrapage au retour de veille du téléphone.
 
-- **Plan interactif** : image (capture de carte) importée par un admin, sur laquelle on dessine des secteurs polygonaux (clic pour poser chaque coin).
-- **Équipes** : nom, membres, nombre de calendriers au départ, couleur.
-- **Secteurs** : attribués à une équipe, contiennent une liste de rues.
-- **Suivi par rue** : état (à faire / commencée / faite / à repasser), point d'arrêt si interrompue, note si à repasser, calendriers vendus, somme encaissée.
-- **Agrégats en direct** : somme collectée, calendriers vendus/restants, rues faites/commencées/à repasser, par équipe et au global.
-- **Deux vues** : « Vue d'ensemble » (admins) et « Ma tournée » (équipe choisie une fois, mémorisée via `localStorage`).
-- **Liens Google Maps** par rue (recherche simple, pas d'itinéraire).
-- **Temps réel** entre tous les appareils connectés.
+## Mise en route
 
-### Modèle de données
+### 1. Supabase (projet `tournee-calendriers`, déjà créé et migré)
 
-| Emplacement | Contenu |
+Les migrations sont dans `supabase/migrations/`. Réglages à faire une fois dans le tableau de bord Supabase :
+
+1. **Authentication → Sign In / Providers → « Allow anonymous sign-ins »** : à activer. Sinon, les liens d'équipe ne fonctionnent pas.
+2. **Authentication → URL Configuration** :
+   - *Site URL* : l'adresse de production (ex. `https://tournee-calendriers.vercel.app`) ;
+   - *Redirect URLs* : ajouter la même adresse et `http://localhost:3000`.
+
+### 2. Mapbox
+
+Créez un jeton public (`pk.…`) sur https://account.mapbox.com/access-tokens/ et restreignez-le aux URL du site.
+
+### 3. Variables d'environnement
+
+Voir `.env.example` : `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `NEXT_PUBLIC_MAPBOX_TOKEN`.
+
+```bash
+cp .env.example .env.local   # puis renseigner le jeton Mapbox
+npm install
+npm run dev
+```
+
+### 4. Vercel
+
+Importez le dépôt dans Vercel, ajoutez les trois variables d'environnement, déployez, puis reportez l'URL obtenue dans Supabase (étape 1.2).
+
+### 5. Premier usage
+
+1. Ouvrez le site et connectez-vous avec votre e-mail : vous devenez admin.
+2. « Réglages » : titre et commune (la carte se centre dessus).
+3. Créez les équipes, dessinez les secteurs, saisissez les rues (une par ligne).
+4. Dans chaque équipe, « Modifier l'équipe et son lien » → « Partager » le lien à l'équipe.
+
+## Modèle de données
+
+| Table | Contenu |
 |---|---|
-| `config/main` (document unique) | `{ titre, ville, planId, planW, planH }` — `planId` pointe vers l'image uploadée via `assets` |
-| collection `equipes` | `{ nom, membres, depart, couleur, creeA }` |
-| collection `secteurs` | `{ nom, equipeId, points: [[x,y]…] (normalisés 0–1 sur l'image), rues: { id: {nom, ordre} }, suivi: { rueId: {etat, arret, note, vendus, somme, maj} }, majA, creeA }` |
+| `config` (1 ligne) | titre, ville, cadrage par défaut de la carte |
+| `admins` | e-mails des responsables |
+| `equipes` | nom, membres, calendriers au départ, couleur |
+| `jetons_equipe` | lien secret de chaque équipe (lisible par les admins seulement) |
+| `membres_equipe` | utilisateur anonyme → équipe |
+| `secteurs` | nom, équipe, `contour` `[[lng, lat], …]` |
+| `rues` | secteur, nom, ordre, état, arrêt, note, vendus, espèces, chèques, repasse, maj_a |
+| `historique` | journal des modifications de chaque rue |
 
-### Permissions
+Les équipes écrivent uniquement via les fonctions `noter_rue` et `ajouter_rue`, qui vérifient que le secteur leur appartient.
 
-Deux rôles fournis par claude.ai : « peut modifier » (admin : équipes, secteurs, plan) et « peut écrire des données » (contributeur : suivi des rues). Pas de droits par équipe : une équipe peut techniquement modifier n'importe quel secteur, le cloisonnement n'existe que dans l'interface.
+## Prototype d'origine
 
-## Limites connues
-
-1. **Carte statique** : image plate, pas de zoom fluide, pas de géolocalisation ni d'itinéraire.
-2. **Pas d'authentification par équipe** : simple choix local sur le téléphone.
-3. **Pas d'historique/audit** : seul l'état courant de chaque rue est stocké.
-4. **Pas de distinction espèces/chèques** dans les sommes encaissées.
-5. **Import d'image uniquement** : pas de vrai fond de carte.
-
-## Pistes pour la « vraie app »
-
-- Stack : **Next.js + Supabase** (base temps réel + auth), déployé sur **Vercel**.
-- Polygones GPS (lat/lng) sur une carte Leaflet/Mapbox avec fond de carte standard (plus d'image importée).
-- Compte ou lien d'accès par équipe.
-- Conserver le modèle de données (équipes / secteurs / rues avec état, vendus, somme), pensé pour être portable.
+`prototype/tournee-calendriers.html` : première version, qui tournait dans l'environnement Artifact de claude.ai (image de plan importée, pas de droits par équipe). Conservée pour référence.
