@@ -9,6 +9,7 @@ import { agreger, avancement, distance, prixMoyen } from "@/lib/agregats";
 import { COULEURS, ETATS, type Config, type Equipe, type Etat, type Historique, type LngLat, type Rue, type Secteur } from "@/lib/types";
 import { Boutons, Modal, toast } from "./ui";
 import { libelle } from "./Carte";
+import { lienItineraire } from "./Secteur";
 
 /** Exécute une écriture Supabase et signale l'échec ; renvoie false pour garder le dialogue ouvert. */
 export async function ecrire(f: () => PromiseLike<{ error: unknown }>): Promise<boolean> {
@@ -26,8 +27,8 @@ const saisie = (n: number) => (n ? String(n).replace(".", ",") : "");
 
 // ---------------------------------------------------------------- rue
 
-export function DialogueRue({ rue, secteur, ruesSecteur, equipes, onClose }: {
-  rue: Rue; secteur: Secteur; ruesSecteur: Rue[]; equipes: Equipe[]; onClose: () => void;
+export function DialogueRue({ rue, secteur, ruesSecteur, equipes, ville = "", onClose }: {
+  rue: Rue; secteur: Secteur; ruesSecteur: Rue[]; equipes: Equipe[]; ville?: string; onClose: () => void;
 }) {
   const [etat, setEtat] = useState<Etat>(rue.etat);
   const [arret, setArret] = useState(rue.arret);
@@ -64,8 +65,13 @@ export function DialogueRue({ rue, secteur, ruesSecteur, equipes, onClose }: {
 
   return (
     <Modal onClose={onClose} onSubmit={enregistrer}>
-      <h2>{rue.nom}</h2>
-      <p className="hint" style={{ margin: "2px 0 0" }}>{libelle(secteur.nom)}</p>
+      <div className="bar" style={{ margin: 0, alignItems: "flex-start" }}>
+        <div className="grow">
+          <h2>{rue.nom}</h2>
+          <p className="hint" style={{ margin: "2px 0 0" }}>{libelle(secteur.nom)}</p>
+        </div>
+        <a className="btn small" href={lienItineraire(rue.nom, ville)} target="_blank" rel="noopener">Y aller</a>
+      </div>
       <div className="avancement" aria-live="polite">
         <div className="av-ligne">
           <span>Avancement du secteur</span>

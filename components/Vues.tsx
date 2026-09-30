@@ -5,15 +5,15 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { cleNom, ruesOsm } from "@/lib/osm";
 import { noterRue } from "@/lib/fileAttente";
 import { departParDefaut, milieu, ordonner } from "@/lib/parcours";
-import { reglageDe, useReglagesParcours, type Reglage } from "@/lib/useParcours";
+import { reglageDe, regler, useReglagesParcours, type Reglage } from "@/lib/useParcours";
 import { messageErreur } from "@/lib/format";
 import { supabase } from "@/lib/supabase";
-import { agreger, argentEquipe, argentTotal, avancement, prixMoyen, ruesDe } from "@/lib/agregats";
+import { agreger, argentEquipe, argentTotal, avancement, distance, prixMoyen, ruesDe } from "@/lib/agregats";
 import { eur, ilya } from "@/lib/format";
 import type { Donnees } from "@/lib/useTournee";
 import { GRIS, type Config, type Equipe, type LngLat, type Rue, type Secteur } from "@/lib/types";
 import { Chevron } from "./icones";
-import { BlocSecteur, ResumeSecteur, type ActionsSecteur } from "./Secteur";
+import { BlocSecteur, Coche, ResumeSecteur, lienItineraire, sousTitreRue, type ActionsSecteur } from "./Secteur";
 import { DialogueAjoutRue, DialogueEquipe, DialogueFinale, DialogueRue, DialogueSecteur, ecrire } from "./Dialogues";
 import { Kpis, Modal, Progression as Barre, toast } from "./ui";
 import { exporterRecap, exporterRues } from "@/lib/export";
@@ -67,10 +67,12 @@ function useActions(d: Donnees, admin: boolean, peutNoter: (s: Secteur) => boole
   const marquerFaite = async (s: Secteur, rue: Rue) => {
     const rs = ruesDu(s.id);
     const apres = avancement(rs, (r) => (r.id === rue.id ? "faite" : r.etat));
-    const res = await noterRue(rue.id, { etat: "faite", arret: rue.arret, note: rue.note, vendus: rue.vendus, especes: rue.especes, cheques: rue.cheques });
+    const avant = { etat: rue.etat, arret: rue.arret, note: rue.note, vendus: rue.vendus, especes: rue.especes, cheques: rue.cheques };
+    const res = await noterRue(rue.id, { ...avant, etat: "faite" });
+    const annuler = { libelle: "Annuler", faire: () => { noterRue(rue.id, avant).then((r) => typeof r === "object" && toast(messageErreur(r.erreur))); } };
     if (typeof res === "object") toast(messageErreur(res.erreur));
-    else if (res === "attente") toast(`${rue.nom} : faite (gardée sur le téléphone, envoi au retour du réseau)`);
-    else toast(`${rue.nom} faite · ${libelle(s.nom)} : ${apres.pct} %`);
+    else if (res === "attente") toast(`${rue.nom} faite (envoi au retour du réseau)`, annuler);
+    else toast(`${rue.nom} faite · ${libelle(s.nom)} : ${apres.pct} %`, annuler);
   };
 
   const onDessin = async (contour: LngLat[], id: string | null) => {
@@ -84,7 +86,7 @@ function useActions(d: Donnees, admin: boolean, peutNoter: (s: Secteur) => boole
   if (dialogue?.t === "rue") {
     const rue = d.rues.find((r) => r.id === dialogue.rue.id) ?? dialogue.rue;
     const secteur = d.secteurs.find((s) => s.id === rue.secteur_id);
-    if (secteur) rendu = <DialogueRue rue={rue} secteur={secteur} ruesSecteur={ruesDu(secteur.id)} equipes={d.equipes} onClose={fermer} />;
+    if (secteur) rendu = <DialogueRue rue={rue} secteur={secteur} ruesSecteur={ruesDu(secteur.id)} equipes={d.equipes} ville={d.config?.ville ?? ""} onClose={fermer} />;
   } else if (dialogue?.t === "ajout-rue") rendu = <DialogueAjoutRue secteur={dialogue.secteur} onClose={fermer} />;
   else if (dialogue?.t === "equipe") rendu = <DialogueEquipe equipe={dialogue.equipe} equipes={d.equipes} onClose={fermer} />;
   else if (dialogue?.t === "finale") {
@@ -204,10 +206,45 @@ function Progression({ a, depart, rues }: { a: ReturnType<typeof agreger>; depar
   );
 }
 
+/** Pas-à-pas de mise en route, affiché tant qu'il reste une étape (masquable). */
+function Demarrage({ d, config, onReglages, onEquipe, onDessiner }: {
+  d: Donnees; config: Config; onReglages: () => void; onEquipe: () => void; onDessiner: () => void;
+}) {
+  const [masque, setMasque] = useState(() => { try { return localStorage.getItem("tournee-demarrage-masque") === "1"; } catch { return false; } });
+  const etapes = [
+    { fait: !!config.ville, texte: "Indiquer la commune (la carte se centre dessus)", action: "Réglages", faire: onReglages },
+    { fait: d.equipes.length > 0, texte: "Créer les équipes (binômes, trinômes)", action: "Nouvelle équipe", faire: onEquipe },
+    { fait: d.secteurs.length > 0, texte: "Dessiner les secteurs sur la carte", action: "Dessiner", faire: onDessiner },
+    { fait: d.secteurs.length > 0 && d.secteurs.every((s) => d.rues.some((r) => r.secteur_id === s.id)), texte: "Vérifier que chaque secteur a ses rues" },
+    { fait: d.secteurs.length > 0 && d.secteurs.every((s) => s.equipe_id), texte: "Attribuer chaque secteur à une équipe (« Modifier » sur le secteur)" },
+    { fait: false, texte: "Envoyer à chaque équipe son lien : « Modifier l'équipe et son lien » → Partager", optionnel: true },
+  ];
+  const restantes = etapes.filter((e) => !e.fait && !e.optionnel).length;
+  if (masque || restantes === 0) return null;
+  return (
+    <section className="carte-blanche demarrage" aria-label="Mise en route">
+      <div className="bar" style={{ margin: 0 }}>
+        <h2 className="grow" style={{ fontSize: "1.3rem" }}>Mise en route · {etapes.length - 1 - restantes}/{etapes.length - 1}</h2>
+        <button type="button" className="btn small" onClick={() => { setMasque(true); try { localStorage.setItem("tournee-demarrage-masque", "1"); } catch { /* rien */ } }}>Masquer</button>
+      </div>
+      <ol>
+        {etapes.map((e, i) => (
+          <li key={i} className={e.fait ? "fait" : ""}>
+            <span className="puce">{e.fait ? "✓" : i + 1}</span>
+            <span className="texte">{e.texte}</span>
+            {!e.fait && e.faire && <button type="button" className="btn small" onClick={e.faire}>{e.action}</button>}
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
 // ---------------------------------------------------------------- vue d'ensemble (admins)
 
-export function VueEnsemble({ d, config, dessinDemande, onDessinActif }: {
+export function VueEnsemble({ d, config, dessinDemande, onDessinActif, onReglages, onDessiner }: {
   d: Donnees; config: Config; dessinDemande: number; onDessinActif: (actif: boolean) => void;
+  onReglages?: () => void; onDessiner?: () => void;
 }) {
   const [ouvertes, setOuvertes] = useState<Set<string>>(new Set());
   const [exporter, setExport] = useState(false);
@@ -227,6 +264,8 @@ export function VueEnsemble({ d, config, dessinDemande, onDessinActif }: {
 
   return (
     <>
+      <Demarrage d={d} config={config} onReglages={onReglages ?? (() => {})} onDessiner={onDessiner ?? (() => {})}
+        onEquipe={() => a.setDialogue({ t: "equipe", equipe: null })} />
       <Kpis a={total} depart={depart} argent={argentTotal(d.equipes, d.secteurs, d.rues)} />
       <div className="zone-carte">
         <div className="gauche">
@@ -343,46 +382,106 @@ export function VueEnsemble({ d, config, dessinDemande, onDessinActif }: {
 
 // ---------------------------------------------------------------- vue équipe
 
+/** Résumé compact de l'équipe (remplace les 6 compteurs sur la page équipe). */
+function ResumeEquipe({ t, rues, argent }: { t: Equipe; rues: Rue[]; argent: ReturnType<typeof argentEquipe> }) {
+  const a = agreger(rues);
+  const av = avancement(rues);
+  const dep = Number(t.depart) || 0;
+  return (
+    <section className="carte-blanche resume-equipe" aria-label="Résumé de l'équipe">
+      <div className="argent">{eur(argent.somme)}</div>
+      <div className="chiffres">
+        <span><strong>{a.vendus}</strong>{dep ? ` / ${dep}` : ""} cal.</span>
+        <span><strong>{a.faite}</strong>/{a.rues} rues</span>
+        {a.arepasser > 0 && <span style={{ color: "var(--repasser)" }}><strong style={{ color: "inherit" }}>{a.arepasser}</strong> à repasser</span>}
+      </div>
+      <div className="jauge"><i style={{ width: `${av.pct}%`, background: "var(--done)" }} /></div>
+      <div className="legende-pct">
+        {av.pct} % parcouru{av.metresTotal ? ` · ${distance(av.metresFaits)} sur ${distance(av.metresTotal)}` : ""}
+        {argent.finale ? " · somme finale déclarée" : ""}
+      </div>
+    </section>
+  );
+}
+
+/** La prochaine rue à faire, selon l'ordre de passage, avec les gestes principaux en gros. */
+function ProchaineRue({ secs, ruesDu, reglages, ville, onFaite, onOuvrir }: {
+  secs: Secteur[]; ruesDu: (id: string) => Rue[]; reglages: Record<string, Reglage>; ville: string;
+  onFaite: (s: Secteur, r: Rue) => void; onOuvrir: (r: Rue) => void;
+}) {
+  for (const s of secs) {
+    const rs = ruesDu(s.id);
+    const r = reglageDe(reglages, s.id);
+    const { etapes } = ordonner(rs, r.depart ?? departParDefaut(rs));
+    const e = etapes[0];
+    if (!e) continue;
+    const suivante = etapes[1]?.rue;
+    return (
+      <section className="carte-blanche prochaine" aria-label="Prochaine rue">
+        <div className="surtitre">Prochaine rue · {libelle(s.nom)} · {etapes.length} restante{etapes.length > 1 ? "s" : ""}</div>
+        <h2>{e.rue.nom}</h2>
+        <p className="info">{sousTitreRue(e.rue)}</p>
+        <div className="actions-rue">
+          <button type="button" className="btn vert" onClick={() => onFaite(s, e.rue)}><Coche size={22} /> Rue faite</button>
+          <button type="button" className="btn" onClick={() => onOuvrir(e.rue)}>Noter les ventes</button>
+          <a className="btn" href={lienItineraire(e.rue.nom, ville)} target="_blank" rel="noopener">Y aller</a>
+        </div>
+        {suivante && (
+          <button type="button" className="btn lien passer" onClick={() => regler(s.id, { mode: "parcours", depart: { rue: suivante.id } })}>
+            Passer cette rue pour l&apos;instant (suivante : {suivante.nom})
+          </button>
+        )}
+      </section>
+    );
+  }
+  if (!secs.length) return null;
+  return <p className="bravo">Toutes vos rues sont faites. Bravo et merci !</p>;
+}
+
 export function VueEquipe({ d, config, equipeId, admin }: { d: Donnees; config: Config; equipeId: string; admin: boolean }) {
   const a = useActions(d, false, (s) => admin || s.equipe_id === equipeId);
   useTraces(d, equipeId);
   const reglages = useReglagesParcours();
+  const [onglet, setOnglet] = useState<"rues" | "carte">("rues");
   const t = d.equipes.find((e) => e.id === equipeId);
   if (!t) return <div className="empty"><strong>Équipe introuvable</strong>Elle a peut-être été supprimée. Demandez un nouveau lien à votre responsable.</div>;
   const secs = d.secteurs.filter((s) => s.equipe_id === t.id);
-  const ta = agreger(secs.flatMap((s) => a.ruesDu(s.id)));
+  const ruesEquipe = secs.flatMap((s) => a.ruesDu(s.id));
+  const ta = agreger(ruesEquipe);
+  const argent = argentEquipe(t, ta);
   return (
     <>
-      <Kpis a={ta} depart={Number(t.depart) || 0} argent={argentEquipe(t, ta)} libelle={`collectés par ${t.nom}`} />
-      <Carte config={config} equipes={d.equipes} secteurs={d.secteurs} rues={d.rues} focusEquipe={t.id} selection={a.selection}
-        etapes={etapesCarte(secs, a.ruesDu, reglages)}
-        onSelect={(id) => {
-          a.setSelection(id);
-          if (id) document.getElementById(`secteur-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
-        }} admin={false} />
-      {secs.length ? (
-        <>
-          <p className="hint" style={{ margin: 0 }}>Touchez une rue pour noter où vous en êtes.</p>
-          {secs.map((s) => (
-            <div className="card" key={s.id} id={`secteur-${s.id}`}>
-              <BlocSecteur secteur={s} rues={a.ruesDu(s.id)} equipe={t} ville={config.ville} montrerEquipe={false} actions={a.actions(s)} />
-            </div>
-          ))}
-        </>
+      <ResumeEquipe t={t} rues={ruesEquipe} argent={argent} />
+      {secs.length > 0 && (
+        <ProchaineRue secs={secs} ruesDu={a.ruesDu} reglages={reglages} ville={config.ville}
+          onFaite={(s, r) => a.actions(s).marquerFaite?.(r)} onOuvrir={(r) => a.actions(secs.find((s) => s.id === r.secteur_id)!).ouvrirRue?.(r)} />
+      )}
+      <div className="onglets-equipe" role="tablist" aria-label="Affichage">
+        <button type="button" role="tab" aria-selected={onglet === "rues"} onClick={() => setOnglet("rues")}>Rues</button>
+        <button type="button" role="tab" aria-selected={onglet === "carte"} onClick={() => setOnglet("carte")}>Carte</button>
+      </div>
+      {onglet === "carte" ? (
+        <Carte config={config} equipes={d.equipes} secteurs={d.secteurs} rues={d.rues} focusEquipe={t.id} selection={a.selection}
+          etapes={etapesCarte(secs, a.ruesDu, reglages)}
+          onSelect={(id) => a.setSelection(id)} admin={false} />
+      ) : secs.length ? (
+        secs.map((s) => (
+          <div className="card" key={s.id} id={`secteur-${s.id}`}>
+            <BlocSecteur secteur={s} rues={a.ruesDu(s.id)} equipe={t} ville={config.ville} montrerEquipe={false} actions={a.actions(s)} />
+          </div>
+        ))
       ) : (
-        <div className="empty"><strong>Aucun secteur attribué</strong>Demandez à un admin de vous attribuer un secteur.</div>
+        <div className="empty"><strong>Aucun secteur attribué</strong>Demandez à un responsable de vous attribuer un secteur.</div>
       )}
       <section className="card finale">
         <div style={{ flexGrow: 1, minWidth: 200 }}>
           <h3>Fin de tournée</h3>
           <span className="hint">
-            {argentEquipe(t, ta).finale
-              ? `Somme finale déclarée : ${eur(argentEquipe(t, ta).somme)}`
-              : "Facultatif : déclarez l'argent réellement remis pour les statistiques."}
+            {argent.finale ? `Somme finale déclarée : ${eur(argent.somme)}` : "Facultatif : déclarez l'argent réellement remis pour les statistiques."}
           </span>
         </div>
         <button className="btn" onClick={() => a.setDialogue({ t: "finale", equipe: t })}>
-          {argentEquipe(t, ta).finale ? "Modifier la somme finale" : "Déclarer la somme finale"}
+          {argent.finale ? "Modifier la somme finale" : "Déclarer la somme finale"}
         </button>
       </section>
       {a.rendu}

@@ -46,6 +46,8 @@ button, input, textarea, select { font: inherit; color: inherit }
 /* ---------- boutons */
 .btn { border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 8px 14px; cursor: pointer; font-weight: 600;
   text-decoration: none; display: inline-flex; align-items: center; gap: 8px; min-height: 40px }
+a.btn { color: var(--ink) }
+a.btn.primary, a.btn.vert { color: inherit }
 .btn:disabled { opacity: .5; cursor: default }
 .btn.primary { background: var(--signal); border-color: var(--signal); color: var(--ink) }
 .btn.danger { color: var(--danger) }
@@ -210,6 +212,62 @@ button, input, textarea, select { font: inherit; color: inherit }
 .titre-section { display: flex; align-items: center; gap: 12px; margin-top: 10px }
 .titre-section h2 { flex-grow: 1 }
 
+/* ---------- liste des rues (v2) */
+.rues { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px }
+.rue { display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-left: 6px solid #C5CEDA;
+  border-radius: 12px; padding: 6px 6px 6px 10px; min-height: 60px }
+.rue.etat-encours { border-left-color: var(--signal); background: #FFFBEA }
+.rue.etat-arepasser { border-left-color: var(--repasser); background: #FDF1F6 }
+.rue.etat-faite { border-left-color: #1E8A4C }
+.rue-corps { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 1px; border: 0; background: none;
+  padding: 6px 0; text-align: left; cursor: pointer; font: inherit; color: inherit }
+div.rue-corps { cursor: default }
+.rue-nom { font-weight: 600; font-size: 1.02rem; line-height: 1.25 }
+.rue-sous { font-size: .86rem; color: var(--muted); line-height: 1.3 }
+.rue.etat-encours .rue-sous { color: #7A5300 }
+.rue.etat-arepasser .rue-sous { color: #9C1449 }
+.rue.etat-faite .rue-nom { color: var(--muted) }
+.rue .coche { width: 52px; height: 48px }
+.en-attente { color: #8A5A00; font-style: normal; font-weight: 600 }
+.faites { margin-top: 10px }
+.faites > summary, .depart-menu > summary { cursor: pointer; font-weight: 600; color: var(--muted); padding: 8px 2px; list-style: none }
+.faites > summary::before, .depart-menu > summary::before { content: "▸ "; }
+.faites[open] > summary::before, .depart-menu[open] > summary::before { content: "▾ "; }
+.depart-menu { flex: 1 1 220px; min-width: 0 }
+.depart-menu > summary { font-size: .9rem; padding: 6px 2px }
+.depart-options { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px }
+.depart-options select { flex: 1 1 200px; min-width: 0; padding: 7px 8px }
+.pct-secteur { font-family: var(--font-barlow-condensed), sans-serif; font-weight: 700; font-size: 1.5rem }
+.bravo { background: #EEF6F1; color: #1E6B3E; border-radius: 12px; padding: 12px 14px; font-weight: 600; margin: 10px 0 0 }
+
+/* ---------- page équipe : résumé, prochaine rue, onglets */
+.resume-equipe { display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; align-items: center; padding: 14px 16px }
+.resume-equipe .argent { font-family: var(--font-barlow-condensed), sans-serif; font-weight: 700; font-size: 2.2rem; line-height: 1 }
+.resume-equipe .chiffres { display: flex; flex-wrap: wrap; gap: 2px 14px; font-size: .95rem; color: var(--muted); justify-content: flex-end }
+.resume-equipe .chiffres strong { color: var(--ink) }
+.resume-equipe .jauge { grid-column: 1 / -1; height: 10px; margin-top: 6px }
+.resume-equipe .legende-pct { grid-column: 1 / -1; font-size: .88rem; color: var(--muted) }
+.prochaine { border: 2px solid var(--blue); padding: 16px }
+.prochaine .surtitre { font-size: .85rem; font-weight: 700; color: var(--blue); text-transform: uppercase; letter-spacing: .04em }
+.prochaine h2 { font-size: 1.9rem; margin: 2px 0 2px; line-height: 1.1 }
+.prochaine .info { color: var(--muted); margin: 0 0 12px }
+.prochaine .actions-rue { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 8px }
+.prochaine .actions-rue > * { min-height: 56px; justify-content: center; font-size: 1rem; border-radius: 14px }
+.btn.vert { background: #1E8A4C; border-color: #1E8A4C; color: #fff }
+.prochaine .passer { margin-top: 10px; font-size: .9rem; text-align: left; line-height: 1.35 }
+.onglets-equipe { display: grid; grid-template-columns: 1fr 1fr; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 4px; gap: 4px;
+  position: sticky; top: 8px; z-index: 5; box-shadow: 0 2px 10px rgba(20, 34, 58, .08) }
+.onglets-equipe button { border: 0; background: none; border-radius: 10px; min-height: 48px; font-weight: 700; font-size: 1rem; color: var(--muted); cursor: pointer }
+.onglets-equipe button[aria-selected="true"] { background: var(--navy); color: #fff }
+.demarrage { padding: 16px 18px; border: 2px solid var(--signal) }
+.demarrage ol { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px }
+.demarrage li { display: flex; align-items: center; gap: 10px }
+.demarrage .puce { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; font-weight: 700; font-size: .9rem;
+  background: var(--bg); color: var(--muted); border: 2px solid var(--line) }
+.demarrage li.fait .puce { background: #1E8A4C; border-color: #1E8A4C; color: #fff }
+.demarrage li.fait .texte { color: var(--muted); text-decoration: line-through }
+.demarrage .texte { flex: 1 }
+
 /* ---------- dialogue */
 dialog { border: 0; border-radius: 16px; padding: 0; background: var(--surface); color: var(--ink); width: min(520px, 94vw); max-height: 90vh }
 dialog::backdrop { background: rgba(10, 18, 30, .55) }
@@ -219,7 +277,11 @@ input, textarea, select { background: var(--surface); border: 1px solid var(--li
 .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 6px }
 .seg label { margin: 0; font-weight: 600; border: 1px solid var(--line); border-radius: 10px; padding: 10px; text-align: center; cursor: pointer }
 .seg input { position: absolute; opacity: 0; width: 1px; height: 1px }
+.seg label { min-height: 52px; display: flex; align-items: center; justify-content: center }
 .seg label:has(input:checked) { background: var(--navy); color: #fff; border-color: var(--navy) }
+.seg label:has(input[value="faite"]:checked) { background: #1E8A4C; border-color: #1E8A4C }
+.seg label:has(input[value="encours"]:checked) { background: var(--signal); border-color: var(--signal); color: var(--ink) }
+.seg label:has(input[value="arepasser"]:checked) { background: var(--repasser); border-color: var(--repasser) }
 .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 8px }
 .stepper { display: flex; gap: 6px }
 .stepper button { width: 52px; flex: none; border: 1px solid var(--line); background: var(--bg); border-radius: 10px; font-size: 1.4rem; font-weight: 600; cursor: pointer }
@@ -241,7 +303,9 @@ input, textarea, select { background: var(--surface); border: 1px solid var(--li
 .liste-admins { list-style: none; margin: 0; padding: 0 }
 .liste-admins li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--track) }
 .toast { position: fixed; inset: auto; margin: 0; border: 0; overflow: visible; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--navy);
-  color: #fff; padding: 10px 16px; border-radius: 10px; font-weight: 600; z-index: 10; width: max-content; max-width: min(90vw, 520px); text-align: center }
+  color: #fff; padding: 10px 16px; border-radius: 10px; font-weight: 600; z-index: 10; width: max-content; max-width: min(92vw, 520px); display: flex; align-items: center; gap: 14px; text-align: left }
+.toast[style*="display: none"] { display: none !important }
+.toast-action { border: 0; background: var(--signal); color: var(--ink); font-weight: 700; border-radius: 8px; padding: 8px 14px; cursor: pointer; flex-shrink: 0; min-height: 40px }
 
 /* ---------- écrans moyens et téléphones */
 @media (max-width: 1280px) {
@@ -254,11 +318,13 @@ input, textarea, select { background: var(--surface); border: 1px solid var(--li
 }
 @media (max-width: 900px) {
   .side { display: none }
-  .banner { height: 124px; padding: 0 12px 0 16px }
+  .banner { height: 96px; padding: 0 12px 0 16px }
   .banner .photo { max-width: 100%; width: 100% }
   .banner .fondu { right: auto; left: 0; width: 100%; background: linear-gradient(90deg, rgba(20, 34, 58, .95) 0%, rgba(20, 34, 58, .55) 100%) }
-  .banner h1 { font-size: 32px }
-  .banner p { font-size: 16px }
+  .banner h1 { font-size: 28px }
+  .banner p { font-size: 14px; margin-top: 2px }
+  .prochaine .actions-rue { grid-template-columns: 1fr 1fr }
+  .prochaine .actions-rue > :first-child { grid-column: 1 / -1 }
   .btn-verre { height: 44px; padding: 0 12px }
   .btn-verre .libelle { display: none }
   .contenu { padding: 14px 12px 40px; gap: 12px }

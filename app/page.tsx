@@ -132,7 +132,8 @@ export default function Accueil() {
       {equipeVue ? (
         <VueEquipe key={onglet} d={d} config={d.config} equipeId={onglet} admin />
       ) : (
-        <VueEnsemble d={d} config={d.config} dessinDemande={dessinDemande} onDessinActif={setDessinActif} />
+        <VueEnsemble d={d} config={d.config} dessinDemande={dessinDemande} onDessinActif={setDessinActif}
+          onReglages={() => setReglages(true)} onDessiner={() => setDessinDemande((n) => n + 1)} />
       )}
       {reglages && <DialogueReglages config={d.config} moi={role.session.user.email ?? ""} onClose={() => setReglages(false)} />}
       {aide && <DialogueAide onClose={() => setAide(false)} />}

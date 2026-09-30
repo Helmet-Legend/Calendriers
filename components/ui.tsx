@@ -7,19 +7,22 @@ import { Document, Drapeau, Lecture, Panier, Pieces, Route } from "./icones";
 
 // ---------- toasts
 
-type Ecouteur = (m: string) => void;
+type Action = { libelle: string; faire: () => void };
+type Message = { texte: string; action?: Action };
+type Ecouteur = (m: Message) => void;
 const ecouteurs = new Set<Ecouteur>();
-export const toast = (m: string) => ecouteurs.forEach((f) => f(m));
+/** Message temporaire, avec un bouton d'action facultatif (ex. « Annuler »). */
+export const toast = (texte: string, action?: Action) => ecouteurs.forEach((f) => f({ texte, action }));
 
 export function Toasts() {
-  const [msg, setMsg] = useState<string | null>(null);
+  const [msg, setMsg] = useState<Message | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     let h: ReturnType<typeof setTimeout>;
     const f: Ecouteur = (m) => {
       setMsg(m);
       clearTimeout(h);
-      h = setTimeout(() => setMsg(null), 2800);
+      h = setTimeout(() => setMsg(null), m.action ? 6000 : 3000); // plus de temps pour pouvoir annuler
     };
     ecouteurs.add(f);
     return () => {
@@ -38,7 +41,12 @@ export function Toasts() {
   }, [msg]);
   return (
     <div ref={ref} popover="manual" className="toast" role="status" style={msg ? undefined : { display: "none" }}>
-      {msg}
+      <span>{msg?.texte}</span>
+      {msg?.action && (
+        <button type="button" className="toast-action" onClick={() => { msg.action!.faire(); setMsg(null); }}>
+          {msg.action.libelle}
+        </button>
+      )}
     </div>
   );
 }
