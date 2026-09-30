@@ -15,8 +15,17 @@ export function useRole(): [Role, () => Promise<void>] {
 
   const evaluer = useCallback(async (session: Session | null) => {
     if (!session) return setRole({ chargement: false, session: null, admin: false, equipeId: null });
+    const cle = "tournee-role-" + session.user.id;
     const [a, e] = await Promise.all([supabase.rpc("est_admin"), supabase.rpc("mon_equipe")]);
-    setRole({ chargement: false, session, admin: a.data === true, equipeId: (e.data as string | null) ?? null });
+    if (a.error || e.error) {
+      // Hors réseau : on reprend le dernier rôle connu sur ce téléphone.
+      let connu: { admin: boolean; equipeId: string | null } | null = null;
+      try { connu = JSON.parse(localStorage.getItem(cle) ?? "null"); } catch { /* rien */ }
+      if (connu) return setRole({ chargement: false, session, ...connu });
+    }
+    const r = { admin: a.data === true, equipeId: (e.data as string | null) ?? null };
+    if (!a.error && !e.error) try { localStorage.setItem(cle, JSON.stringify(r)); } catch { /* rien */ }
+    setRole({ chargement: false, session, ...r });
   }, []);
 
   useEffect(() => {
@@ -46,6 +55,7 @@ export interface Donnees {
   attente: number;
 }
 
+const CLE_COPIE = "tournee-copie-locale";
 const rienEnAttente = () => AUCUNE;
 const AUCUNE: ReturnType<typeof enAttente> = [];
 
@@ -55,6 +65,23 @@ type Table = (typeof TABLES)[number];
 /** Charge toute la tournée et la garde à jour en temps réel. */
 export function useTournee(actif: boolean): Donnees {
   const [d, setD] = useState<Omit<Donnees, "attente">>({ pret: false, config: null, equipes: [], secteurs: [], rues: [], enLigne: true });
+  // Au démarrage, on affiche la dernière copie gardée sur le téléphone (utile hors réseau),
+  // remplacée dès que les données fraîches arrivent.
+  useEffect(() => {
+    if (!actif) return;
+    try {
+      const copie = JSON.parse(localStorage.getItem(CLE_COPIE) ?? "null");
+      if (copie?.config) setD((p) => (p.pret ? p : { ...p, ...copie, pret: true }));
+    } catch { /* copie illisible : ignorée */ }
+  }, [actif]);
+  useEffect(() => {
+    if (!d.pret || !d.config) return;
+    const h = setTimeout(() => {
+      try { localStorage.setItem(CLE_COPIE, JSON.stringify({ config: d.config, equipes: d.equipes, secteurs: d.secteurs, rues: d.rues })); }
+      catch { /* stockage plein : pas de copie */ }
+    }, 2000);
+    return () => clearTimeout(h);
+  }, [d]);
   const file = useSyncExternalStore(surChangement, enAttente, rienEnAttente);
   const attente = useRef(new Set<Table>());
   const minuteur = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -64,8 +91,8 @@ export function useTournee(actif: boolean): Donnees {
     await Promise.all(
       [...tables].map(async (t) => {
         if (t === "config") {
-          const { data } = await supabase.from("config").select("*").eq("id", 1).maybeSingle();
-          maj.config = data as Config | null;
+          const { data, error } = await supabase.from("config").select("*").eq("id", 1).maybeSingle();
+          if (!error) maj.config = data as Config | null;
         } else if (t === "equipes") {
           const { data } = await supabase.from("equipes").select("*").order("cree_a");
           if (data)

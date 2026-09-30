@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Cadre } from "@/components/Page";
+import { CLE_JETON } from "@/components/Installation";
 
 type Etat = "attente" | "admin" | "invalide" | "erreur";
 
@@ -26,6 +27,7 @@ export default function Rejoindre() {
       const { data, error } = await supabase.rpc("rejoindre_equipe", { p_jeton: jeton });
       if (error) return setEtat("erreur");
       if (!data) return setEtat("invalide");
+      try { localStorage.setItem(CLE_JETON, jeton); } catch { /* stockage indisponible */ }
       router.replace("/equipe");
     })();
   }, [jeton, router]);

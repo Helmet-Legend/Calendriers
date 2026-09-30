@@ -82,7 +82,10 @@ export default function Accueil() {
   if (role.chargement || (anonyme && role.equipeId)) return <Cadre />;
   if (!role.session || anonyme) return <Connexion />;
   const deconnexion = (
-    <button type="button" className="btn-verre" onClick={() => supabase.auth.signOut()}>
+    <button type="button" className="btn-verre" onClick={() => {
+      try { for (const k of Object.keys(localStorage)) if (k.startsWith("tournee-copie") || k.startsWith("tournee-role-")) localStorage.removeItem(k); } catch { /* rien */ }
+      supabase.auth.signOut();
+    }}>
       <Sortie /><span className="libelle">Déconnexion</span>
     </button>
   );

@@ -10,6 +10,9 @@ const barlowCondensed = Barlow_Condensed({ subsets: ["latin"], weight: ["600", "
 export const metadata: Metadata = {
   title: "Tournée des calendriers",
   description: "Suivi en temps réel de la tournée des calendriers, rue par rue.",
+  manifest: "/api/manifest",
+  appleWebApp: { capable: true, title: "Tournée", statusBarStyle: "black-translucent" },
+  icons: { apple: "/apple-touch-icon.png" },
 };
 
 export const viewport: Viewport = {

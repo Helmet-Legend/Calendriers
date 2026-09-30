@@ -108,7 +108,7 @@ export function Progression({ a }: { a: Agregat }) {
     <div className="progress" aria-hidden="true">
       <i style={{ width: w(a.faite), background: "var(--done)" }} />
       <i style={{ width: w(a.encours), background: "var(--signal)" }} />
-      <i style={{ width: w(a.arepasser), background: "var(--redo)" }} />
+      <i style={{ width: w(a.arepasser), background: "var(--repasser)" }} />
     </div>
   );
 }
@@ -149,9 +149,9 @@ export function Kpis({ a, depart, argent, libelle = "collectés sur la tournée"
         valeur={depart ? depart - a.vendus : "—"} pct={depart ? ((depart - a.vendus) / depart) * 100 : 0} />
       <Tuile icone={<Route />} fond="#E8E3FC" couleur="var(--violet)" barre="var(--violet)" libelle="rues faites"
         valeur={`${a.faite} / ${a.rues}`} pct={pctRues(a.faite)} />
-      <Tuile icone={<Lecture />} fond="#FDE8D6" couleur="#C45A12" barre="var(--redo)" libelle="rues commencées"
+      <Tuile icone={<Lecture />} fond="#FFF4D6" couleur="#8A5A00" barre="var(--signal)" libelle="rues commencées"
         valeur={a.encours} pct={pctRues(a.encours)} />
-      <Tuile icone={<Drapeau />} fond="#FCDEDE" couleur="var(--danger)" barre="var(--danger)" libelle="rues à repasser"
+      <Tuile icone={<Drapeau />} fond="#FBE0EC" couleur="var(--repasser)" barre="var(--repasser)" libelle="rues à repasser"
         valeur={a.arepasser} pct={pctRues(a.arepasser)} />
     </div>
   );

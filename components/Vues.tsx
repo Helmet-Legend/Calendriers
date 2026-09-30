@@ -179,8 +179,8 @@ function Progression({ a, depart, rues }: { a: ReturnType<typeof agreger>; depar
           <li><i style={{ background: "var(--done)" }} /><span>Vendus</span><b>{a.vendus}</b></li>
           {depart > 0 && <li><i style={{ background: "#6FA8F2" }} /><span>Restants</span><b>{depart - a.vendus}</b></li>}
           <li><i style={{ background: "var(--violet)" }} /><span>Rues faites</span><b>{a.faite}</b></li>
-          <li><i style={{ background: "var(--redo)" }} /><span>Commencées</span><b>{a.encours}</b></li>
-          <li><i style={{ background: "var(--danger)" }} /><span>À repasser</span><b>{a.arepasser}</b></li>
+          <li><i style={{ background: "var(--signal)" }} /><span>Commencées</span><b>{a.encours}</b></li>
+          <li><i style={{ background: "var(--repasser)" }} /><span>À repasser</span><b>{a.arepasser}</b></li>
         </ul>
       </div>
     </section>
@@ -285,7 +285,7 @@ export function VueEnsemble({ d, config, dessinDemande, onDessinActif }: {
               {dep > 0 && <span><strong>{dep - ta.vendus}</strong> restants</span>}
               <span><strong>{ta.faite}/{ta.rues}</strong> rues</span>
               {prix !== null && <span><strong>{eur(prix)}</strong> / calendrier</span>}
-              {ta.arepasser > 0 && <span style={{ color: "var(--redo)" }}><strong style={{ color: "inherit" }}>{ta.arepasser}</strong> à repasser</span>}
+              {ta.arepasser > 0 && <span style={{ color: "var(--repasser)" }}><strong style={{ color: "inherit" }}>{ta.arepasser}</strong> à repasser</span>}
               <span style={muette ? { color: "var(--danger)" } : undefined}>{muette ? "sans nouvelles " : ""}{ilya(ta.maj || null)}</span>
             </div>
             <Barre a={ta} />

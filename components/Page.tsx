@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import type { Donnees } from "@/lib/useTournee";
 import { Aide, Barres, Calendrier, Groupe, Repere } from "./icones";
+import { Installation } from "./Installation";
 
 /** Titre du bandeau : le premier mot en blanc, la suite en bleu. */
 function Titre({ texte }: { texte: string }) {
@@ -59,6 +60,7 @@ export function Cadre({
           {actions && <div className="actions">{actions}</div>}
         </header>
         <main className="contenu">
+          <Installation />
           {d?.pret && !d.enLigne && <div className="horsligne">Connexion perdue : les chiffres affichés ne sont peut-être plus à jour.</div>}
           {d && d.attente > 0 && (
             <div className="attente" role="status">

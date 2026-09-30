@@ -176,11 +176,21 @@ export default function Carte(p: Props) {
           paint: { "line-color": "#ffffff", "line-width": ["interpolate", ["linear"], ["zoom"], 13, 5, 17, 13], "line-opacity": opacite as never },
         });
         m.addLayer({
-          id: "traces", type: "line", source: "traces",
+          id: "traces", type: "line", source: "traces", filter: ["!=", ["get", "etat"], "arepasser"],
           layout: { "line-join": "round", "line-cap": "round" },
           paint: {
-            "line-color": ["match", ["get", "etat"], "faite", "#1E8A4C", "encours", "#F5C22E", "arepasser", "#E0782B", "#8A96A8"],
+            "line-color": ["match", ["get", "etat"], "faite", "#1E8A4C", "encours", "#F5C22E", "#8A96A8"],
             "line-width": ["interpolate", ["linear"], ["zoom"], 13, 3, 17, 8],
+            "line-opacity": opacite as never,
+          },
+        });
+        m.addLayer({
+          id: "traces-repasser", type: "line", source: "traces", filter: ["==", ["get", "etat"], "arepasser"],
+          layout: { "line-join": "round", "line-cap": "butt" },
+          paint: {
+            "line-color": "#C2185B",
+            "line-width": ["interpolate", ["linear"], ["zoom"], 13, 3.5, 17, 9],
+            "line-dasharray": [1.6, 0.9],
             "line-opacity": opacite as never,
           },
         });
@@ -332,6 +342,11 @@ export default function Carte(p: Props) {
           <Loupe />
           <input type="search" placeholder="Rechercher une adresse…" aria-label="Rechercher une adresse" value={adresse} onChange={(e) => setAdresse(e.target.value)} />
         </form>
+        <ul className="legende-carte" aria-label="Légende des rues">
+          <li><i className="l-faite" />Faite</li>
+          <li><i className="l-encours" />Commencée</li>
+          <li><i className="l-repasser" />À repasser</li>
+        </ul>
         <button type="button" className={`vue-sat ${satellite ? "plan" : ""}`} onClick={basculerFond}>
           {satellite ? "Plan" : "Plan satellite"}
         </button>
