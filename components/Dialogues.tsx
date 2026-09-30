@@ -203,20 +203,22 @@ export function DialogueSecteur({
   const [equipeId, setEquipeId] = useState(secteur?.equipe_id ?? "");
   const [liste, setListe] = useState(rues.map((r) => r.nom).join("\n"));
   const [recherche, setRecherche] = useState(false);
+  const [statut, setStatut] = useState("");
   const zone = contour ?? secteur?.contour ?? [];
 
   const remplir = async () => {
     if (zone.length < 3 || recherche) return;
     setRecherche(true);
+    setStatut("Recherche des rues de la zone sur OpenStreetMap…");
     try {
       const trouvees = await ruesDansZone(zone);
       const actuelles = liste.split("\n").map((x) => x.trim()).filter(Boolean);
       const connues = new Set(actuelles.map((x) => x.toLowerCase()));
       const ajout = trouvees.filter((n) => !connues.has(n.toLowerCase()));
       setListe([...actuelles, ...ajout].join("\n"));
-      toast(ajout.length ? `${ajout.length} rue${ajout.length > 1 ? "s" : ""} ajoutée${ajout.length > 1 ? "s" : ""} depuis la carte` : "Aucune nouvelle rue trouvée dans la zone");
+      setStatut(ajout.length ? `${ajout.length} rue${ajout.length > 1 ? "s" : ""} ajoutée${ajout.length > 1 ? "s" : ""} depuis la carte.` : "Aucune nouvelle rue trouvée dans la zone.");
     } catch {
-      toast("Impossible de récupérer les rues, réessayez");
+      setStatut("Impossible de récupérer les rues (serveurs OpenStreetMap indisponibles). Réessayez dans un instant.");
     } finally {
       setRecherche(false);
     }
@@ -230,6 +232,7 @@ export function DialogueSecteur({
 
   const enregistrer = async () => {
     if (!nom.trim()) return false;
+    if (recherche) return false;
     const noms = liste.split("\n").map((x) => x.trim()).filter(Boolean).slice(0, 300);
     const data = { nom: nom.trim(), equipe_id: equipeId || null, ...(contour ? { contour } : {}) };
     let id = secteur?.id;
@@ -283,10 +286,11 @@ export function DialogueSecteur({
           <span className="hint">ajoute les rues de la zone, vérifiez ensuite la liste</span>
         </div>
       )}
+      {statut && <p className="hint" role="status" style={{ margin: "0 0 8px", fontWeight: 600 }}>{statut}</p>}
       <textarea id="f-rues" rows={10} placeholder={"Rue Victor Hugo\nAvenue Jean Jaurès\nImpasse des Lilas"} value={liste} onChange={(e) => setListe(e.target.value)} />
       <p className="hint">Rues d&apos;OpenStreetMap ayant au moins un bout dans la zone : retirez celles qui ne font que la longer.</p>
       {secteur && <p className="hint">Retirer une rue de la liste efface aussi ce qui a été noté pour elle.</p>}
-      <Boutons valider={secteur ? "Enregistrer" : "Créer le secteur"} onClose={onClose} />
+      <Boutons valider={recherche ? "Recherche des rues…" : secteur ? "Enregistrer" : "Créer le secteur"} onClose={onClose} />
     </Modal>
   );
 }

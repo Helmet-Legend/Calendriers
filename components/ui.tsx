@@ -11,6 +11,7 @@ export const toast = (m: string) => ecouteurs.forEach((f) => f(m));
 
 export function Toasts() {
   const [msg, setMsg] = useState<string | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     let h: ReturnType<typeof setTimeout>;
     const f: Ecouteur = (m) => {
@@ -24,11 +25,20 @@ export function Toasts() {
       clearTimeout(h);
     };
   }, []);
-  return msg ? (
-    <div className="toast" role="status">
+  // En popover, le message passe dans la « top layer », au-dessus des dialogues ouverts.
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !("showPopover" in el)) return;
+    try {
+      if (el.matches(":popover-open")) el.hidePopover();
+      if (msg) el.showPopover();
+    } catch { /* navigateur sans popover : affichage classique */ }
+  }, [msg]);
+  return (
+    <div ref={ref} popover="manual" className="toast" role="status" style={msg ? undefined : { display: "none" }}>
       {msg}
     </div>
-  ) : null;
+  );
 }
 
 // ---------- dialogue modal

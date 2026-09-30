@@ -97,4 +97,4 @@ input, textarea, select { background: var(--surface); border: 1px solid var(--li
 .histo li { padding: 4px 0; border-top: 1px solid var(--line) }
 .liste-admins { list-style: none; margin: 0; padding: 0 }
 .liste-admins li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line) }
-.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-weight: 600; z-index: 10; max-width: 90vw }
+.toast { position: fixed; inset: auto; margin: 0; border: 0; overflow: visible; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-weight: 600; z-index: 10; max-width: 90vw }
