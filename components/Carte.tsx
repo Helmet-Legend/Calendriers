@@ -31,6 +31,8 @@ interface Props {
   redessin?: string | null;
   onRedessinFini?: () => void;
   onDessinActif?: (actif: boolean) => void;
+  /** Numéros de l'ordre de passage à afficher sur les rues. */
+  etapes?: { n: number; pos: LngLat }[];
 }
 
 const centre = (pts: LngLat[]): LngLat => [
@@ -155,6 +157,7 @@ export default function Carte(p: Props) {
       m.on("style.load", () => {
         m.addSource("zones", { type: "geojson", data: vide });
         m.addSource("traces", { type: "geojson", data: vide });
+        m.addSource("etapes", { type: "geojson", data: vide });
         m.addSource("dessin", { type: "geojson", data: vide });
         m.addLayer({
           id: "zones-fond", type: "fill", source: "zones",
@@ -194,6 +197,24 @@ export default function Carte(p: Props) {
             "line-opacity": opacite as never,
           },
         });
+        m.addLayer({
+          id: "etapes-rond", type: "circle", source: "etapes",
+          paint: {
+            "circle-radius": ["interpolate", ["linear"], ["zoom"], 13, 7, 17, 12],
+            "circle-color": ["case", ["==", ["get", "n"], 1], "#2F7BEA", "#14223A"],
+            "circle-stroke-color": "#ffffff", "circle-stroke-width": 2,
+          },
+        });
+        m.addLayer({
+          id: "etapes-num", type: "symbol", source: "etapes",
+          layout: {
+            "text-field": ["to-string", ["get", "n"]],
+            "text-font": ["DIN Pro Bold", "Arial Unicode MS Bold"],
+            "text-size": ["interpolate", ["linear"], ["zoom"], 13, 9, 17, 13],
+            "text-allow-overlap": true, "text-ignore-placement": true,
+          },
+          paint: { "text-color": "#ffffff" },
+        });
         m.addLayer({ id: "dessin-fond", type: "fill", source: "dessin", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": "#F5C22E", "fill-opacity": 0.25 } });
         m.addLayer({ id: "dessin-ligne", type: "line", source: "dessin", filter: ["==", ["geometry-type"], "LineString"], paint: { "line-color": "#F5C22E", "line-width": 3, "line-dasharray": [2, 1] } });
         m.addLayer({
@@ -232,6 +253,10 @@ export default function Carte(p: Props) {
     if (!prete || !m) return;
     (m.getSource("zones") as GeoJSONSource | undefined)?.setData(geo.zones);
     (m.getSource("traces") as GeoJSONSource | undefined)?.setData(geo.traces);
+    (m.getSource("etapes") as GeoJSONSource | undefined)?.setData({
+      type: "FeatureCollection",
+      features: (p.etapes ?? []).map((e) => ({ type: "Feature", properties: { n: e.n }, geometry: { type: "Point", coordinates: e.pos } })),
+    });
     if (!cadree.current) {
       const cibles = p.secteurs.filter((s) => s.contour.length >= 3 && (!p.focusEquipe || s.equipe_id === p.focusEquipe));
       const pts = (cibles.length ? cibles : p.secteurs).flatMap((s) => s.contour);
@@ -241,7 +266,7 @@ export default function Carte(p: Props) {
         cadree.current = true;
       }
     }
-  }, [prete, geo, p.secteurs, p.focusEquipe]);
+  }, [prete, geo, p.secteurs, p.focusEquipe, p.etapes]);
 
   // ---------- étiquettes (marqueurs HTML : pastille, pourcentage, nom)
   useEffect(() => {

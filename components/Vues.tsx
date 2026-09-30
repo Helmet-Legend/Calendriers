@@ -4,6 +4,8 @@ import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { cleNom, ruesOsm } from "@/lib/osm";
 import { noterRue } from "@/lib/fileAttente";
+import { departParDefaut, milieu, ordonner } from "@/lib/parcours";
+import { reglageDe, useReglagesParcours, type Reglage } from "@/lib/useParcours";
 import { messageErreur } from "@/lib/format";
 import { supabase } from "@/lib/supabase";
 import { agreger, argentEquipe, argentTotal, avancement, prixMoyen, ruesDe } from "@/lib/agregats";
@@ -124,6 +126,21 @@ function useTraces(d: Donnees, equipeId?: string) {
   }, [d.secteurs, d.rues, equipeId]);
 }
 
+/** Numéros d'étape à poser sur la carte pour les secteurs affichés en « ordre de passage ». */
+function etapesCarte(secteurs: Secteur[], ruesDu: (id: string) => Rue[], reglages: Record<string, Reglage>) {
+  const res: { n: number; pos: LngLat }[] = [];
+  for (const s of secteurs) {
+    const rs = ruesDu(s.id);
+    const r = reglageDe(reglages, s.id);
+    if (r.mode !== "parcours" || !rs.some((x) => x.trace?.length)) continue;
+    for (const e of ordonner(rs, r.depart ?? departParDefaut(rs)).etapes) {
+      const pos = milieu(e.rue);
+      if (pos) res.push({ n: e.n, pos });
+    }
+  }
+  return res;
+}
+
 const cadrer = (c: { lng: number; lat: number; zoom: number }) =>
   ecrire(() => supabase.from("config").update({ centre_lng: c.lng, centre_lat: c.lat, zoom: c.zoom }).eq("id", 1));
 
@@ -195,6 +212,7 @@ export function VueEnsemble({ d, config, dessinDemande, onDessinActif }: {
   const [ouvertes, setOuvertes] = useState<Set<string>>(new Set());
   const [exporter, setExport] = useState(false);
   const a = useActions(d, true, () => true);
+  const reglages = useReglagesParcours();
   useTraces(d);
   const total = agreger(d.rues);
   const depart = d.equipes.reduce((t, e) => t + (Number(e.depart) || 0), 0);
@@ -214,6 +232,7 @@ export function VueEnsemble({ d, config, dessinDemande, onDessinActif }: {
         <div className="gauche">
           <Carte config={config} equipes={d.equipes} secteurs={d.secteurs} rues={d.rues} selection={a.selection} onSelect={a.setSelection}
             admin onDessin={a.onDessin} onCadrage={cadrer} dessinDemande={dessinDemande} onDessinActif={onDessinActif}
+            etapes={etapesCarte(d.secteurs.filter((s) => s.id === a.selection), a.ruesDu, reglages)}
             redessin={a.redessin} onRedessinFini={() => a.setRedessin(null)} />
           {choisi ? (
             <div className="card" id="detail-secteur">
@@ -327,6 +346,7 @@ export function VueEnsemble({ d, config, dessinDemande, onDessinActif }: {
 export function VueEquipe({ d, config, equipeId, admin }: { d: Donnees; config: Config; equipeId: string; admin: boolean }) {
   const a = useActions(d, false, (s) => admin || s.equipe_id === equipeId);
   useTraces(d, equipeId);
+  const reglages = useReglagesParcours();
   const t = d.equipes.find((e) => e.id === equipeId);
   if (!t) return <div className="empty"><strong>Équipe introuvable</strong>Elle a peut-être été supprimée. Demandez un nouveau lien à votre responsable.</div>;
   const secs = d.secteurs.filter((s) => s.equipe_id === t.id);
@@ -335,6 +355,7 @@ export function VueEquipe({ d, config, equipeId, admin }: { d: Donnees; config: 
     <>
       <Kpis a={ta} depart={Number(t.depart) || 0} argent={argentEquipe(t, ta)} libelle={`collectés par ${t.nom}`} />
       <Carte config={config} equipes={d.equipes} secteurs={d.secteurs} rues={d.rues} focusEquipe={t.id} selection={a.selection}
+        etapes={etapesCarte(secs, a.ruesDu, reglages)}
         onSelect={(id) => {
           a.setSelection(id);
           if (id) document.getElementById(`secteur-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });

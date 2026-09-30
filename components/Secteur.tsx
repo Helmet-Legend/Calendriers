@@ -4,6 +4,10 @@ import { agreger, avancement, distance, prixMoyen } from "@/lib/agregats";
 import { libelle, pastille } from "./Carte";
 import { eur, lienMaps } from "@/lib/format";
 import { ETATS, GRIS, type Equipe, type Rue, type Secteur } from "@/lib/types";
+import { departParDefaut, ordonner } from "@/lib/parcours";
+import { reglageDe, regler, useReglagesParcours } from "@/lib/useParcours";
+import { useState } from "react";
+import { toast } from "./ui";
 import { Epingle, Progression } from "./ui";
 
 export interface ActionsSecteur {
@@ -21,7 +25,9 @@ const Coche = () => (
   </svg>
 );
 
-function ListeRues({ rues, ville, onRue, onFaite }: { rues: Rue[]; ville: string; onRue?: (r: Rue) => void; onFaite?: (r: Rue) => void }) {
+function ListeRues({ rues, ville, onRue, onFaite, numeros }: {
+  rues: Rue[]; ville: string; onRue?: (r: Rue) => void; onFaite?: (r: Rue) => void; numeros?: Map<string, number>;
+}) {
   if (!rues.length) return <p className="hint">Aucune rue pour ce secteur.</p>;
   return (
     <ul className="streets">
@@ -33,6 +39,7 @@ function ListeRues({ rues, ville, onRue, onFaite }: { rues: Rue[]; ville: string
         const somme = r.especes + r.cheques;
         return (
           <li key={r.id} className={onRue ? "tap" : ""} onClick={onRue ? () => onRue(r) : undefined}>
+            {numeros && <span className={`etape ${numeros.get(r.id) === 1 ? "premiere" : ""}`} aria-label={numeros.has(r.id) ? `Étape ${numeros.get(r.id)}` : "Faite"}>{numeros.get(r.id) ?? "✓"}</span>}
             <span className={`chip ${r.etat}`}>{ETATS[r.etat]}</span>
             <span className="n">
               {r.nom}
@@ -79,6 +86,33 @@ export function BlocSecteur({
 }) {
   const a = agreger(rues);
   const av = avancement(rues);
+  const reglages = useReglagesParcours();
+  const reglage = reglageDe(reglages, secteur.id);
+  const [gps, setGps] = useState(false);
+  const traces = rues.some((r) => r.trace?.length);
+  const enParcours = traces && reglage.mode === "parcours";
+  const parcours = enParcours ? ordonner(rues, reglage.depart ?? departParDefaut(rues)) : null;
+  const liste = parcours ? [...parcours.etapes.map((e) => e.rue), ...parcours.faites] : rues;
+  const numeros = parcours ? new Map(parcours.etapes.map((e) => [e.rue.id, e.n])) : undefined;
+  const departRue = reglage.depart && "rue" in reglage.depart ? reglage.depart.rue : "";
+
+  const partirDIci = () => {
+    if (!("geolocation" in navigator)) return toast("Ce téléphone ne donne pas sa position");
+    setGps(true);
+    navigator.geolocation.getCurrentPosition(
+      (p) => {
+        setGps(false);
+        regler(secteur.id, { mode: "parcours", depart: { point: [p.coords.longitude, p.coords.latitude] } });
+        toast("Parcours recalculé depuis votre position");
+      },
+      (e) => {
+        setGps(false);
+        toast(e.code === e.PERMISSION_DENIED ? "Localisation refusée : autorisez-la dans les réglages du téléphone" : "Position introuvable, réessayez dehors");
+      },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 },
+    );
+  };
+
   return (
     <>
       <div className="sector-title">
@@ -101,7 +135,31 @@ export function BlocSecteur({
         <span><strong>{eur(a.somme)}</strong> récoltés</span>
       </div>
       <Progression a={a} />
-      <ListeRues rues={rues} ville={ville} onRue={actions.ouvrirRue} onFaite={actions.marquerFaite} />
+      {traces && rues.length > 1 && (
+        <div className="barre-parcours">
+          <div className="seg-mini" role="group" aria-label="Ordre des rues">
+            <button type="button" aria-pressed={enParcours} onClick={() => regler(secteur.id, { mode: "parcours" })}>Ordre de passage</button>
+            <button type="button" aria-pressed={!enParcours} onClick={() => regler(secteur.id, { mode: "alpha" })}>Liste</button>
+          </div>
+          {enParcours && (
+            <>
+              <button type="button" className="btn small" onClick={partirDIci} disabled={gps}>
+                {gps ? "Localisation…" : "Partir d'ici"}
+              </button>
+              <label className="depart">
+                <span>Départ</span>
+                <select value={departRue} onChange={(e) => regler(secteur.id, { depart: e.target.value ? { rue: e.target.value } : null })}>
+                  <option value="">{reglage.depart && "point" in reglage.depart ? "Ma position" : "Automatique"}</option>
+                  {rues.filter((r) => r.etat !== "faite" && r.trace?.length).sort((x, y) => x.nom.localeCompare(y.nom, "fr")).map((r) => (
+                    <option key={r.id} value={r.id}>{r.nom}</option>
+                  ))}
+                </select>
+              </label>
+            </>
+          )}
+        </div>
+      )}
+      <ListeRues rues={liste} ville={ville} onRue={actions.ouvrirRue} onFaite={actions.marquerFaite} numeros={numeros} />
       <div className="bar">
         {actions.ajouterRue && (
           <button className="btn small" onClick={() => actions.ajouterRue!(secteur)}>
