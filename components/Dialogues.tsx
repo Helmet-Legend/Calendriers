@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { ruesDansZone } from "@/lib/osm";
 import { eur, ilya, messageErreur, montant } from "@/lib/format";
-import { avancement, distance } from "@/lib/agregats";
+import { agreger, avancement, distance, prixMoyen } from "@/lib/agregats";
 import { COULEURS, ETATS, type Config, type Equipe, type Etat, type Historique, type LngLat, type Rue, type Secteur } from "@/lib/types";
 import { Boutons, Modal, toast } from "./ui";
 import { libelle } from "./Carte";
@@ -107,11 +107,11 @@ export function DialogueRue({ rue, secteur, ruesSecteur, equipes, onClose }: {
       </div>
       <div className="duo">
         <div>
-          <label htmlFor="f-especes">Espèces (€)</label>
+          <label htmlFor="f-especes">Espèces (€) <span className="hint">facultatif</span></label>
           <input id="f-especes" inputMode="decimal" placeholder="0" value={especes} onChange={(e) => setEspeces(e.target.value)} />
         </div>
         <div>
-          <label htmlFor="f-cheques">Chèques (€)</label>
+          <label htmlFor="f-cheques">Chèques (€) <span className="hint">facultatif</span></label>
           <input id="f-cheques" inputMode="decimal" placeholder="0" value={cheques} onChange={(e) => setCheques(e.target.value)} />
         </div>
       </div>
@@ -394,6 +394,50 @@ export function DialogueReglages({ config, moi, onClose }: { config: Config; moi
       </div>
       <p className="hint">Le nouvel admin se connecte ensuite avec cette adresse sur la page d&apos;accueil.</p>
       <Boutons valider="Enregistrer" onClose={onClose} />
+    </Modal>
+  );
+}
+
+// ---------------------------------------------------------------- somme finale d'une équipe
+
+export function DialogueFinale({ equipe, rues, onClose }: { equipe: Equipe; rues: Rue[]; onClose: () => void }) {
+  const [especes, setEspeces] = useState(equipe.finale_especes === null ? "" : saisie(equipe.finale_especes) || "0");
+  const [cheques, setCheques] = useState(equipe.finale_cheques === null ? "" : saisie(equipe.finale_cheques) || "0");
+  const a = agreger(rues);
+  const total = montant(especes) + montant(cheques);
+  const prix = prixMoyen(total, a.vendus);
+  const declarer = (e: number | null, c: number | null) =>
+    ecrire(() => supabase.rpc("declarer_somme_finale", { p_equipe: equipe.id, p_especes: e, p_cheques: c }));
+
+  return (
+    <Modal onClose={onClose} onSubmit={() => (especes.trim() || cheques.trim() ? declarer(montant(especes), montant(cheques)) : declarer(null, null))}>
+      <h2>Somme finale — {equipe.nom}</h2>
+      <p className="hint" style={{ margin: "4px 0 0" }}>
+        Facultatif. L&apos;argent réellement remis en fin de tournée : il remplace le total noté rue par rue et sert aux statistiques.
+      </p>
+      <div className="duo">
+        <div>
+          <label htmlFor="f-fesp">Espèces (€)</label>
+          <input id="f-fesp" inputMode="decimal" placeholder="0" value={especes} onChange={(e) => setEspeces(e.target.value)} />
+        </div>
+        <div>
+          <label htmlFor="f-fchq">Chèques (€)</label>
+          <input id="f-fchq" inputMode="decimal" placeholder="0" value={cheques} onChange={(e) => setCheques(e.target.value)} />
+        </div>
+      </div>
+      <div className="avancement">
+        <div className="av-ligne"><span>Total déclaré</span><b>{eur(total)}</b></div>
+        <span className="hint">
+          {a.vendus} calendrier{a.vendus > 1 ? "s" : ""} vendu{a.vendus > 1 ? "s" : ""}
+          {prix !== null ? ` · ${eur(prix)} en moyenne par calendrier` : ""}
+          {a.somme ? ` · ${eur(a.somme)} noté rue par rue` : ""}
+        </span>
+      </div>
+      <Boutons valider="Enregistrer" onClose={onClose}
+        gauche={equipe.finale_a ? (
+          <button type="button" className="btn danger" style={{ marginRight: "auto" }}
+            onClick={async () => { if (await declarer(null, null)) onClose(); }}>Effacer</button>
+        ) : undefined} />
     </Modal>
   );
 }

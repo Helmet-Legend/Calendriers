@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import type { Agregat } from "@/lib/agregats";
+import { prixMoyen, type Agregat, type Argent } from "@/lib/agregats";
 import { eur } from "@/lib/format";
 import { Document, Drapeau, Lecture, Panier, Pieces, Route } from "./icones";
 
@@ -126,16 +126,21 @@ function Tuile({ icone, fond, couleur, valeur, libelle, pct, barre }: {
   );
 }
 
-export function Kpis({ a, depart, libelle = "collectés sur la tournée" }: { a: Agregat; depart: number; libelle?: string }) {
+export function Kpis({ a, depart, argent, libelle = "collectés sur la tournée" }: {
+  a: Agregat; depart: number; argent?: Argent; libelle?: string;
+}) {
   const pctRues = (n: number) => (a.rues ? (n / a.rues) * 100 : 0);
+  const m = argent ?? { ...a, finale: false };
+  const prix = prixMoyen(m.somme, a.vendus);
   return (
     <div className="kpis">
       <div className="carte-blanche kpi-total">
         <Pieces />
         <div>
-          <b>{eur(a.somme)}</b>
-          <span>{libelle}</span>
-          <small>{eur(a.especes)} en espèces, {eur(a.cheques)} en chèques</small>
+          <b>{eur(m.somme)}</b>
+          <span>{libelle}{m.finale ? " (somme finale déclarée)" : ""}</span>
+          <small>{eur(m.especes)} en espèces, {eur(m.cheques)} en chèques</small>
+          {prix !== null && <small><strong style={{ fontStyle: "normal" }}>{eur(prix)}</strong> en moyenne par calendrier</small>}
         </div>
       </div>
       <Tuile icone={<Panier />} fond="#DDF3E4" couleur="#1E8A4C" barre="var(--done)" libelle="calendriers vendus"

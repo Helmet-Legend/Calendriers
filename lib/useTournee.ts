@@ -60,7 +60,12 @@ export function useTournee(actif: boolean): Donnees {
           maj.config = data as Config | null;
         } else if (t === "equipes") {
           const { data } = await supabase.from("equipes").select("*").order("cree_a");
-          if (data) maj.equipes = data as Equipe[];
+          if (data)
+            maj.equipes = (data as Equipe[]).map((e) => ({
+              ...e,
+              finale_especes: e.finale_especes === null ? null : Number(e.finale_especes),
+              finale_cheques: e.finale_cheques === null ? null : Number(e.finale_cheques),
+            }));
         } else if (t === "secteurs") {
           const { data } = await supabase.from("secteurs").select("*").order("cree_a");
           if (data) maj.secteurs = data as Secteur[];

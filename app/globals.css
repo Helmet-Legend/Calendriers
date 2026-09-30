@@ -135,6 +135,19 @@ button, input, textarea, select { font: inherit; color: inherit }
 .legende span { flex-grow: 1 }
 .legende b { color: var(--ink) }
 
+.resume { border: 2px solid var(--blue) }
+.resume-tete { display: flex; align-items: center; gap: 12px; margin-bottom: 10px }
+.resume-pct { display: flex; align-items: baseline; gap: 8px }
+.resume-pct b { font-family: var(--font-barlow-condensed), sans-serif; font-size: 44px; line-height: 1 }
+.resume-pct span { color: var(--muted) }
+.resume-chiffres { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0 0 }
+.resume-chiffres div { background: var(--bg); border-radius: 12px; padding: 10px 12px }
+.resume-chiffres dt { font-size: 13px; color: var(--muted) }
+.resume-chiffres dd { margin: 0; font-family: var(--font-barlow-condensed), sans-serif; font-size: 24px; font-weight: 700 }
+.resume-chiffres dd.petit { font-size: 17px }
+.finale { display: flex; align-items: center; gap: 12px; flex-wrap: wrap }
+.tag { display: inline-block; font-size: .78rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #DDF3E4; color: #1E6B3E }
+
 /* ---------- équipes & rues */
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px }
 .team-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; cursor: pointer }

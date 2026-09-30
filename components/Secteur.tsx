@@ -1,6 +1,7 @@
 "use client";
 
-import { agreger, avancement, distance } from "@/lib/agregats";
+import { agreger, avancement, distance, prixMoyen } from "@/lib/agregats";
+import { libelle, pastille } from "./Carte";
 import { eur, lienMaps } from "@/lib/format";
 import { ETATS, GRIS, type Equipe, type Rue, type Secteur } from "@/lib/types";
 import { Epingle, Progression } from "./ui";
@@ -74,15 +75,15 @@ export function BlocSecteur({
           {av.metresTotal ? ` (${distance(av.metresFaits)} sur ${distance(av.metresTotal)})` : ""}
         </span>
       </div>
-      {montrerEquipe && (
-        <div className="line">
+      <div className="line">
+        {montrerEquipe && (
           <span>
             Équipe : <strong>{equipe ? equipe.nom : "non attribuée"}</strong>
           </span>
-          <span>{a.vendus} cal.</span>
-          <span>{eur(a.somme)}</span>
-        </div>
-      )}
+        )}
+        <span><strong>{a.vendus}</strong> cal. vendus</span>
+        <span><strong>{eur(a.somme)}</strong> récoltés</span>
+      </div>
       <Progression a={a} />
       <ListeRues rues={rues} ville={ville} onRue={actions.ouvrirRue} />
       <div className="bar">
@@ -101,5 +102,43 @@ export function BlocSecteur({
         )}
       </div>
     </>
+  );
+}
+
+/** Résumé d'un secteur choisi : progression, calendriers et argent récolté. */
+export function ResumeSecteur({ secteur, rues, equipe, onFermer }: {
+  secteur: Secteur; rues: Rue[]; equipe: Equipe | undefined; onFermer?: () => void;
+}) {
+  const a = agreger(rues);
+  const av = avancement(rues);
+  const c = equipe?.couleur ?? GRIS;
+  const prix = prixMoyen(a.somme, a.vendus);
+  return (
+    <section className="carte-blanche bloc resume" aria-label={`Résumé du ${libelle(secteur.nom)}`}>
+      <div className="resume-tete">
+        <span className="pastille" style={{ background: c }}>{pastille(secteur.nom)}</span>
+        <div style={{ flexGrow: 1, minWidth: 0 }}>
+          <h2 style={{ margin: 0 }}>{libelle(secteur.nom)}</h2>
+          <span className="hint">{equipe ? equipe.nom : "Pas encore attribué"}</span>
+        </div>
+        {onFermer && <button type="button" className="btn small" onClick={onFermer}>Fermer</button>}
+      </div>
+      <div className="resume-pct">
+        <b>{a.rues ? `${av.pct} %` : "—"}</b>
+        <span>parcouru</span>
+      </div>
+      <div className="jauge" style={{ height: 10 }}><i style={{ width: `${av.pct}%`, background: c }} /></div>
+      <p className="hint" style={{ margin: "6px 0 0" }}>
+        {a.faite}/{a.rues} rues faites{av.metresTotal ? ` · ${distance(av.metresFaits)} sur ${distance(av.metresTotal)}` : ""}
+        {a.encours ? ` · ${a.encours} commencée${a.encours > 1 ? "s" : ""}` : ""}
+        {a.arepasser ? ` · ${a.arepasser} à repasser` : ""}
+      </p>
+      <dl className="resume-chiffres">
+        <div><dt>Calendriers vendus</dt><dd>{a.vendus}</dd></div>
+        <div><dt>Argent récolté</dt><dd>{eur(a.somme)}</dd></div>
+        <div><dt>Espèces / chèques</dt><dd className="petit">{eur(a.especes)} / {eur(a.cheques)}</dd></div>
+        <div><dt>Moyenne par calendrier</dt><dd>{prix === null ? "—" : eur(prix)}</dd></div>
+      </dl>
+    </section>
   );
 }

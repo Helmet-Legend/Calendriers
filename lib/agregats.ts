@@ -1,4 +1,4 @@
-import type { Rue, Secteur } from "./types";
+import type { Equipe, Rue, Secteur } from "./types";
 
 export interface Agregat {
   rues: number;
@@ -79,3 +79,31 @@ export function avancement(rues: Rue[], etatDe: (r: Rue) => Rue["etat"] = (r) =>
 /** « 1,2 km » ou « 350 m ». */
 export const distance = (m: number) =>
   m >= 1000 ? `${(m / 1000).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} km` : `${Math.round(m)} m`;
+
+// ---------- argent récolté
+
+export interface Argent { especes: number; cheques: number; somme: number; finale: boolean }
+
+export const aUneFinale = (e: Equipe) => e.finale_especes !== null || e.finale_cheques !== null;
+
+/** Argent d'une équipe : sa somme finale si elle l'a déclarée, sinon ce qui a été noté rue par rue. */
+export function argentEquipe(e: Equipe, a: Agregat): Argent {
+  if (aUneFinale(e)) {
+    const especes = Number(e.finale_especes ?? 0), cheques = Number(e.finale_cheques ?? 0);
+    return { especes, cheques, somme: especes + cheques, finale: true };
+  }
+  return { especes: a.especes, cheques: a.cheques, somme: a.somme, finale: false };
+}
+
+/** Argent de toute la tournée : équipes (finale ou rues) + rues des secteurs sans équipe. */
+export function argentTotal(equipes: Equipe[], secteurs: Secteur[], rues: Rue[]): Argent {
+  const t: Argent = { especes: 0, cheques: 0, somme: 0, finale: false };
+  const ajouter = (x: Argent) => { t.especes += x.especes; t.cheques += x.cheques; t.somme += x.somme; t.finale ||= x.finale; };
+  for (const e of equipes) ajouter(argentEquipe(e, agreger(ruesDe(rues, secteurs.filter((s) => s.equipe_id === e.id)))));
+  const ids = new Set(equipes.map((e) => e.id));
+  ajouter({ ...agreger(ruesDe(rues, secteurs.filter((s) => !s.equipe_id || !ids.has(s.equipe_id)))), finale: false });
+  return t;
+}
+
+/** Prix moyen d'un calendrier, ou null si rien de vendu ou pas d'argent noté. */
+export const prixMoyen = (argent: number, vendus: number) => (vendus > 0 && argent > 0 ? argent / vendus : null);

@@ -25,6 +25,10 @@ export interface Equipe {
   depart: number;
   couleur: string;
   cree_a: string;
+  /** Somme finale remise en fin de tournée (facultative). */
+  finale_especes: number | null;
+  finale_cheques: number | null;
+  finale_a: string | null;
 }
 
 export interface Secteur {

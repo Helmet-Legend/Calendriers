@@ -4,13 +4,13 @@ import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { cleNom, ruesOsm } from "@/lib/osm";
 import { supabase } from "@/lib/supabase";
-import { agreger, avancement } from "@/lib/agregats";
+import { agreger, argentEquipe, argentTotal, avancement, prixMoyen, ruesDe } from "@/lib/agregats";
 import { eur, ilya } from "@/lib/format";
 import type { Donnees } from "@/lib/useTournee";
 import { GRIS, type Config, type Equipe, type LngLat, type Rue, type Secteur } from "@/lib/types";
 import { Chevron } from "./icones";
-import { BlocSecteur, type ActionsSecteur } from "./Secteur";
-import { DialogueAjoutRue, DialogueEquipe, DialogueRue, DialogueSecteur, ecrire } from "./Dialogues";
+import { BlocSecteur, ResumeSecteur, type ActionsSecteur } from "./Secteur";
+import { DialogueAjoutRue, DialogueEquipe, DialogueFinale, DialogueRue, DialogueSecteur, ecrire } from "./Dialogues";
 import { Kpis, Progression as Barre } from "./ui";
 import { libelle, pastille } from "./Carte";
 
@@ -21,6 +21,7 @@ type Dialogue =
   | { t: "ajout-rue"; secteur: Secteur }
   | { t: "equipe"; equipe: Equipe | null }
   | { t: "secteur"; secteur: Secteur | null; contour?: LngLat[] }
+  | { t: "finale"; equipe: Equipe }
   | null;
 
 /** État partagé par les deux vues : dialogues ouverts et actions sur les secteurs. */
@@ -65,7 +66,10 @@ function useActions(d: Donnees, admin: boolean, peutNoter: (s: Secteur) => boole
     if (secteur) rendu = <DialogueRue rue={rue} secteur={secteur} ruesSecteur={ruesDu(secteur.id)} equipes={d.equipes} onClose={fermer} />;
   } else if (dialogue?.t === "ajout-rue") rendu = <DialogueAjoutRue secteur={dialogue.secteur} onClose={fermer} />;
   else if (dialogue?.t === "equipe") rendu = <DialogueEquipe equipe={dialogue.equipe} equipes={d.equipes} onClose={fermer} />;
-  else if (dialogue?.t === "secteur")
+  else if (dialogue?.t === "finale") {
+    const equipe = d.equipes.find((e) => e.id === dialogue.equipe.id) ?? dialogue.equipe;
+    rendu = <DialogueFinale equipe={equipe} rues={ruesDe(d.rues, d.secteurs.filter((s) => s.equipe_id === equipe.id))} onClose={fermer} />;
+  } else if (dialogue?.t === "secteur")
     rendu = (
       <DialogueSecteur secteur={dialogue.secteur} contour={dialogue.contour} rues={dialogue.secteur ? ruesDu(dialogue.secteur.id) : []}
         equipes={d.equipes} onClose={fermer} onCree={setSelection} />
@@ -185,7 +189,7 @@ export function VueEnsemble({ d, config, dessinDemande, onDessinActif }: {
 
   return (
     <>
-      <Kpis a={total} depart={depart} />
+      <Kpis a={total} depart={depart} argent={argentTotal(d.equipes, d.secteurs, d.rues)} />
       <div className="zone-carte">
         <div className="gauche">
           <Carte config={config} equipes={d.equipes} secteurs={d.secteurs} rues={d.rues} selection={a.selection} onSelect={a.setSelection}
@@ -202,6 +206,7 @@ export function VueEnsemble({ d, config, dessinDemande, onDessinActif }: {
           )}
         </div>
         <div className="droite">
+          {choisi && <ResumeSecteur secteur={choisi} rues={a.ruesDu(choisi.id)} equipe={equipe(choisi.equipe_id)} onFermer={() => a.setSelection(null)} />}
           <ListeSecteurs d={d} ruesDu={a.ruesDu} selection={a.selection} onSelect={choisir} />
           <Progression a={total} depart={depart} rues={d.rues} />
         </div>
@@ -219,6 +224,8 @@ export function VueEnsemble({ d, config, dessinDemande, onDessinActif }: {
       {d.equipes.map((t) => {
         const secs = d.secteurs.filter((s) => s.equipe_id === t.id);
         const ta = agreger(secs.flatMap((s) => a.ruesDu(s.id)));
+        const argent = argentEquipe(t, ta);
+        const prix = prixMoyen(argent.somme, ta.vendus);
         const dep = Number(t.depart) || 0;
         const ouverte = ouvertes.has(t.id);
         const muette = ta.maj > 0 && ta.faite < ta.rues && Date.now() - ta.maj > 45 * 60000;
@@ -230,12 +237,16 @@ export function VueEnsemble({ d, config, dessinDemande, onDessinActif }: {
                 <h2><span className="swatch" style={{ background: t.couleur }} />{t.nom}</h2>
                 {t.membres && <div className="hint">{t.membres}</div>}
               </div>
-              <div className="num" style={{ fontSize: "1.4rem", whiteSpace: "nowrap" }}>{eur(ta.somme)}</div>
+              <div style={{ textAlign: "right" }}>
+                <div className="num" style={{ fontSize: "1.4rem", whiteSpace: "nowrap" }}>{eur(argent.somme)}</div>
+                {argent.finale && <span className="tag">somme finale</span>}
+              </div>
             </div>
             <div className="line">
               <span><strong>{ta.vendus}</strong>{dep ? ` / ${dep}` : ""} cal. vendus</span>
               {dep > 0 && <span><strong>{dep - ta.vendus}</strong> restants</span>}
               <span><strong>{ta.faite}/{ta.rues}</strong> rues</span>
+              {prix !== null && <span><strong>{eur(prix)}</strong> / calendrier</span>}
               {ta.arepasser > 0 && <span style={{ color: "var(--redo)" }}><strong style={{ color: "inherit" }}>{ta.arepasser}</strong> à repasser</span>}
               <span style={muette ? { color: "var(--danger)" } : undefined}>{muette ? "sans nouvelles " : ""}{ilya(ta.maj || null)}</span>
             </div>
@@ -248,6 +259,9 @@ export function VueEnsemble({ d, config, dessinDemande, onDessinActif }: {
                   <p className="hint">Aucun secteur attribué.</p>
                 )}
                 <div className="bar">
+                  <button className="btn small" onClick={() => a.setDialogue({ t: "finale", equipe: t })}>
+                    {argent.finale ? "Modifier la somme finale" : "Déclarer la somme finale"}
+                  </button>
                   <span className="grow" />
                   <button className="btn small" onClick={() => a.setDialogue({ t: "equipe", equipe: t })}>Modifier l&apos;équipe et son lien</button>
                   <button className="btn small danger" onClick={() => {
@@ -281,7 +295,7 @@ export function VueEquipe({ d, config, equipeId, admin }: { d: Donnees; config: 
   const ta = agreger(secs.flatMap((s) => a.ruesDu(s.id)));
   return (
     <>
-      <Kpis a={ta} depart={Number(t.depart) || 0} libelle={`collectés par ${t.nom}`} />
+      <Kpis a={ta} depart={Number(t.depart) || 0} argent={argentEquipe(t, ta)} libelle={`collectés par ${t.nom}`} />
       <Carte config={config} equipes={d.equipes} secteurs={d.secteurs} rues={d.rues} focusEquipe={t.id} selection={a.selection}
         onSelect={(id) => {
           a.setSelection(id);
@@ -299,6 +313,19 @@ export function VueEquipe({ d, config, equipeId, admin }: { d: Donnees; config: 
       ) : (
         <div className="empty"><strong>Aucun secteur attribué</strong>Demandez à un admin de vous attribuer un secteur.</div>
       )}
+      <section className="card finale">
+        <div style={{ flexGrow: 1, minWidth: 200 }}>
+          <h3>Fin de tournée</h3>
+          <span className="hint">
+            {argentEquipe(t, ta).finale
+              ? `Somme finale déclarée : ${eur(argentEquipe(t, ta).somme)}`
+              : "Facultatif : déclarez l'argent réellement remis pour les statistiques."}
+          </span>
+        </div>
+        <button className="btn" onClick={() => a.setDialogue({ t: "finale", equipe: t })}>
+          {argentEquipe(t, ta).finale ? "Modifier la somme finale" : "Déclarer la somme finale"}
+        </button>
+      </section>
       {a.rendu}
     </>
   );
