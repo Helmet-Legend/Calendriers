@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tournée des calendriers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#E9EDF1;--surface:#FFFFFF;--ink:#15233A;--muted:#617085;--line:#CBD3DC;
+  --signal:#F2C230;--done:#2E8B57;--redo:#E07B24;--danger:#B23A3A;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#101826;--surface:#1A2536;--ink:#E8EDF4;--muted:#93A1B5;--line:#2C3A50;--done:#4CB47C;--redo:#F0934A;--danger:#E07070;}}
+:root[data-theme="dark"]{--bg:#101826;--surface:#1A2536;--ink:#E8EDF4;--muted:#93A1B5;--line:#2C3A50;--done:#4CB47C;--redo:#F0934A;--danger:#E07070;}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Barlow",system-ui,-apple-system,"Segoe UI",sans-serif}
+.wrap{max-width:820px;margin:0 auto;padding:20px 14px 60px}
+h1,h2,h3,.num{font-family:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;font-weight:700;letter-spacing:.01em;margin:0}
+h1{font-size:2rem;line-height:1.1}
+h2{font-size:1.4rem;line-height:1.2}
+h3{font-size:1.15rem}
+.sub{color:var(--muted);margin:4px 0 16px}
+button,input,textarea,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--signal);outline-offset:2px}
+.tabs{display:flex;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:4px;margin-bottom:16px}
+.tabs button{flex:1;border:0;background:none;color:var(--muted);font-weight:600;padding:10px;border-radius:9px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 14px;cursor:pointer;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.btn.primary{background:var(--signal);border-color:var(--signal);color:#15233A}
+.btn.danger{color:var(--danger)}
+.btn.small{padding:5px 10px;font-size:.9rem}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0}
+.bar .grow{flex:1}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:12px}
+.hero{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 18px;margin-bottom:6px}
+.hero .num{font-size:2.8rem;line-height:1}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin:10px 0 16px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.kpi b{display:block;font-family:"Barlow Condensed",sans-serif;font-size:1.6rem;line-height:1.1}
+.kpi span{color:var(--muted);font-size:.88rem}
+.muted{color:var(--muted)}
+.hint{color:var(--muted);font-size:.9rem;font-weight:400}
+/* map */
+.mapwrap{overflow:auto;border:1px solid var(--line);border-radius:14px;background:var(--surface);max-height:70vh;-webkit-overflow-scrolling:touch}
+.mapinner{position:relative}
+.mapinner svg{display:block;width:100%;height:auto;touch-action:manipulation}
+.mapwrap.drawing{outline:3px solid var(--signal)}
+.poly{cursor:pointer}
+.drawing .poly{pointer-events:none}
+.drawhint{background:var(--signal);color:#15233A;border-radius:10px;padding:8px 12px;font-weight:600;margin-top:10px}
+/* teams & streets */
+.team-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;cursor:pointer}
+.swatch{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:middle}
+.line{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.92rem;color:var(--muted);margin-top:6px}
+.line strong{color:var(--ink);font-weight:600}
+.progress{height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin-top:10px;display:flex}
+.progress i{display:block;height:100%}
+.streets{list-style:none;margin:10px 0 0;padding:0;border-top:1px solid var(--line)}
+.streets li{display:flex;align-items:center;gap:10px;padding:10px 2px;border-bottom:1px solid var(--line)}
+.streets li:last-child{border-bottom:0}
+.streets li.tap{cursor:pointer}
+.streets .n{flex:1;min-width:0}
+.streets .n small{display:block;color:var(--muted);font-size:.85rem}
+.streets .fig{text-align:right;font-size:.9rem;white-space:nowrap}
+.chip{flex:none;font-size:.78rem;font-weight:600;padding:3px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.chip.encours{background:var(--signal);border-color:var(--signal);color:#15233A}
+.chip.faite{background:var(--done);border-color:var(--done);color:#fff}
+.chip.arepasser{background:var(--redo);border-color:var(--redo);color:#fff}
+.go{flex:none;display:grid;place-items:center;width:34px;height:34px;border-radius:9px;border:1px solid var(--line);color:var(--ink)}
+.go svg{width:17px;height:17px}
+.sector-title{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:14px}
+.empty{background:var(--surface);border:1px dashed var(--line);border-radius:14px;padding:24px 18px;text-align:center;color:var(--muted);margin-bottom:12px}
+.empty strong{display:block;color:var(--ink);font-size:1.05rem;margin-bottom:4px}
+/* dialog */
+dialog{border:0;border-radius:16px;padding:0;background:var(--surface);color:var(--ink);width:min(520px,94vw);max-height:90vh}
+dialog::backdrop{background:rgba(10,18,30,.55)}
+dialog form{padding:20px}
+label{display:block;font-weight:600;margin:14px 0 6px}
+input,textarea,select{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.seg label{margin:0;font-weight:600;border:1px solid var(--line);border-radius:10px;padding:10px;text-align:center;cursor:pointer}
+.seg input{position:absolute;opacity:0;width:1px;height:1px}
+.seg input:checked+span{display:block}
+.seg label:has(input:checked){background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.stepper{display:flex;gap:6px}
+.stepper button{width:52px;flex:none;border:1px solid var(--line);background:var(--bg);border-radius:10px;font-size:1.4rem;font-weight:600;cursor:pointer}
+.stepper input{text-align:center;font-size:1.2rem;font-weight:600}
+.colors{display:flex;gap:8px;flex-wrap:wrap}
+.colors label{margin:0;width:34px;height:34px;border-radius:50%;cursor:pointer;border:3px solid transparent}
+.colors input{position:absolute;opacity:0;width:1px;height:1px}
+.colors label:has(input:checked){border-color:var(--ink)}
+.row{display:flex;justify-content:flex-end;gap:8px;margin-top:20px;flex-wrap:wrap}
+.row .left{margin-right:auto}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;display:none;z-index:10;max-width:90vw}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 id="title">Tournée des calendriers</h1>
+  <p class="sub" id="sub">Chargement…</p>
+  <div class="tabs" role="tablist">
+    <button role="tab" id="tab-all" aria-selected="true">Vue d'ensemble</button>
+    <button role="tab" id="tab-mine" aria-selected="false">Ma tournée</button>
+  </div>
+  <main id="view"></main>
+</div>
+<dialog id="dlg"><form id="dform" method="dialog"></form></dialog>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid = () => "r" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const eur = n => (Number(n) || 0).toLocaleString("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 2 });
+const COLORS = ["#2B6CB0","#C0392B","#2E8B57","#8E44AD","#D68910","#16A085","#B03A7A","#5D6D7E"];
+const ETATS = { afaire: "À faire", encours: "Commencée", faite: "Faite", arepasser: "À repasser" };
+const PIN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>';
+
+const S = { db: null, assets: null, admin: false, canWrite: true, cfg: {}, equipes: [], secteurs: [], got: 0,
+  tab: "all", sel: null, drawing: null, redrawId: null, zoom: 1, open: new Set() };
+
+function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+function toast(m) { const t = $("#toast"); t.textContent = m; t.style.display = "block"; clearTimeout(toast.h); toast.h = setTimeout(() => t.style.display = "none", 2800); }
+function ago(ts) {
+  if (!ts) return "pas encore commencé";
+  const m = Math.floor((Date.now() - ts) / 60000);
+  if (m < 1) return "à l'instant"; if (m < 60) return "il y a " + m + " min";
+  const h = Math.floor(m / 60); if (h < 24) return "il y a " + h + " h";
+  return "le " + new Date(ts).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+}
+const mapsLink = rue => "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(rue + (S.cfg.ville ? ", " + S.cfg.ville : ""));
+
+// ---------- data helpers
+const team = id => S.equipes.find(e => e.id === id);
+const sector = id => S.secteurs.find(s => s.id === id);
+const colorOf = s => (team(s.equipeId) || {}).couleur || "#8A96A8";
+function streets(s) {
+  const r = s.rues || {}, sv = s.suivi || {};
+  return Object.entries(r).filter(([, v]) => v && v.nom).map(([id, v]) => ({ id, nom: v.nom, ordre: v.ordre || 0, ...(sv[id] || {}) }))
+    .map(x => ({ ...x, etat: x.etat || "afaire", vendus: Number(x.vendus) || 0, somme: Number(x.somme) || 0 }))
+    .sort((a, b) => a.ordre - b.ordre);
+}
+function agg(list) {
+  const a = { rues: 0, faite: 0, encours: 0, arepasser: 0, vendus: 0, somme: 0, maj: 0 };
+  for (const s of list) {
+    for (const r of streets(s)) { a.rues++; if (a[r.etat] !== undefined && r.etat !== "afaire") a[r.etat]++; a.vendus += r.vendus; a.somme += r.somme; }
+    a.maj = Math.max(a.maj, s.majA || 0);
+  }
+  return a;
+}
+const teamSectors = id => S.secteurs.filter(s => s.equipeId === id);
+
+// ---------- rendering pieces
+function progressHTML(a) {
+  if (!a.rues) return "";
+  const w = k => (a[k] / a.rues * 100) + "%";
+  return `<div class="progress" aria-hidden="true"><i style="width:${w("faite")};background:var(--done)"></i><i style="width:${w("encours")};background:var(--signal)"></i><i style="width:${w("arepasser")};background:var(--redo)"></i></div>`;
+}
+
+function mapHTML(focusTeam) {
+  const c = S.cfg;
+  if (!c.planId) {
+    if (S.admin && S.assets) return `<div class="empty"><strong>Pas encore de plan</strong>Ajoutez une image du secteur (capture d'écran de Google Maps ou plan de la commune), puis dessinez les secteurs dessus.<div class="bar" style="justify-content:center"><button class="btn primary" data-act="settings">Ajouter le plan</button></div></div>`;
+    return S.admin ? `<div class="empty"><strong>Pas encore de plan</strong>L'ajout d'image n'est pas disponible dans cette vue.</div>` : "";
+  }
+  const W = c.planW || 1000, H = c.planH || 1000, sw = Math.max(W, H) / 350, fs = Math.max(W, H) / 45;
+  let polys = "";
+  for (const s of S.secteurs) {
+    if (!s.points || s.points.length < 3 || s.id === S.redrawId) continue;
+    const pts = s.points.map(p => (p[0] * W).toFixed(1) + "," + (p[1] * H).toFixed(1)).join(" ");
+    const col = colorOf(s), dim = focusTeam && s.equipeId !== focusTeam, on = S.sel === s.id;
+    const a = agg([s]), pct = a.rues ? Math.round(a.faite / a.rues * 100) : 0;
+    const cx = s.points.reduce((t, p) => t + p[0], 0) / s.points.length * W, cy = s.points.reduce((t, p) => t + p[1], 0) / s.points.length * H;
+    polys += `<g class="poly" data-sec="${s.id}" opacity="${dim ? .25 : 1}">
+      <polygon points="${pts}" fill="${col}" fill-opacity="${0.12 + pct / 100 * 0.38}" stroke="${col}" stroke-width="${on ? sw * 2.2 : sw}" stroke-linejoin="round"/>
+      <text x="${cx}" y="${cy}" text-anchor="middle" font-family="Barlow Condensed, sans-serif" font-weight="700" font-size="${fs}" fill="#fff" stroke="${col}" stroke-width="${fs / 5}" paint-order="stroke">${esc(s.nom)}</text>
+      <text x="${cx}" y="${cy + fs}" text-anchor="middle" font-family="Barlow, sans-serif" font-weight="600" font-size="${fs * .7}" fill="#fff" stroke="${col}" stroke-width="${fs / 6}" paint-order="stroke">${a.rues ? pct + " %" : ""}</text></g>`;
+  }
+  let draw = "";
+  if (S.drawing) {
+    const pts = S.drawing.map(p => (p[0] * W) + "," + (p[1] * H)).join(" ");
+    draw = `<polyline points="${pts}" fill="rgba(242,194,48,.25)" stroke="#F2C230" stroke-width="${sw * 1.5}" stroke-dasharray="${sw * 3} ${sw * 2}"/>` +
+      S.drawing.map((p, i) => `<circle cx="${p[0] * W}" cy="${p[1] * H}" r="${sw * (i ? 2.5 : 3.5)}" fill="#F2C230" stroke="#15233A" stroke-width="${sw / 2}"/>`).join("");
+  }
+  const tools = `<div class="bar">
+    <button class="btn small" data-act="zoom" data-z="-1" aria-label="Dézoomer">−</button>
+    <button class="btn small" data-act="zoom" data-z="1" aria-label="Zoomer">+</button>
+    <span class="grow"></span>
+    ${S.admin && !S.drawing ? `<button class="btn small primary" data-act="draw">Dessiner un secteur</button>` : ""}
+  </div>`;
+  const drawBar = S.drawing ? `<div class="drawhint">Touchez le plan pour poser les coins du secteur (${S.drawing.length} point${S.drawing.length > 1 ? "s" : ""}).</div>
+    <div class="bar"><button class="btn small" data-act="undo" ${S.drawing.length ? "" : "disabled"}>Retirer le dernier point</button>
+    <button class="btn small" data-act="cancel-draw">Abandonner</button><span class="grow"></span>
+    <button class="btn small primary" data-act="finish-draw" ${S.drawing.length >= 3 ? "" : "disabled"}>Terminer le secteur</button></div>` : "";
+  return tools + `<div class="mapwrap ${S.drawing ? "drawing" : ""}" id="mapwrap"><div class="mapinner" style="width:${S.zoom * 100}%">
+    <svg id="map" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg"><image href="/_blob/${esc(c.planId)}" x="0" y="0" width="${W}" height="${H}"/>${polys}${draw}</svg>
+  </div></div>` + drawBar;
+}
+
+function streetsHTML(s, writable) {
+  const list = streets(s);
+  if (!list.length) return `<p class="hint">Aucune rue pour ce secteur.</p>`;
+  return `<ul class="streets">${list.map(r => {
+    let info = "";
+    if (r.etat === "encours" && r.arret) info = "Arrêtée à : " + esc(r.arret);
+    if (r.etat === "arepasser") info = "À repasser" + (r.note ? " : " + esc(r.note) : "");
+    if (r.etat === "faite" && r.repasse) info = "Repasse faite";
+    return `<li class="${writable ? "tap" : ""}" ${writable ? `data-rue="${s.id}|${r.id}"` : ""}>
+      <span class="chip ${r.etat}">${ETATS[r.etat]}</span>
+      <span class="n">${esc(r.nom)}${info ? `<small>${info}</small>` : ""}</span>
+      <span class="fig">${r.vendus ? r.vendus + " cal." : ""}${r.somme ? "<br>" + eur(r.somme) : ""}</span>
+      <a class="go" href="${mapsLink(r.nom)}" target="_blank" rel="noopener" aria-label="Voir ${esc(r.nom)} dans Maps">${PIN}</a>
+    </li>`;
+  }).join("")}</ul>`;
+}
+
+function sectorBlock(s, writable, showTeam) {
+  const a = agg([s]), t = team(s.equipeId);
+  return `<div class="sector-title"><h3><span class="swatch" style="background:${colorOf(s)}"></span>${esc(s.nom)}</h3>
+    <span class="hint">${a.faite}/${a.rues} rues</span></div>
+    ${showTeam ? `<div class="line"><span>Équipe : <strong>${t ? esc(t.nom) : "non attribuée"}</strong></span><span>${a.vendus} cal.</span><span>${eur(a.somme)}</span></div>` : ""}
+    ${progressHTML(a)}${streetsHTML(s, writable)}
+    <div class="bar">${writable ? `<button class="btn small" data-act="add-rue" data-id="${s.id}">Ajouter une rue</button>` : ""}
+    ${S.admin ? `<span class="grow"></span><button class="btn small" data-act="edit-sec" data-id="${s.id}">Modifier</button><button class="btn small" data-act="redraw" data-id="${s.id}">Redessiner</button><button class="btn small danger" data-act="del-sec" data-id="${s.id}">Supprimer</button>` : ""}</div>`;
+}
+
+function kpis(a, depart) {
+  const rest = depart - a.vendus;
+  return `<div class="kpis">
+    <div class="kpi"><b>${a.vendus}${depart ? " / " + depart : ""}</b><span>calendriers vendus</span></div>
+    ${depart ? `<div class="kpi"><b>${rest}</b><span>calendriers restants</span></div>` : ""}
+    <div class="kpi"><b>${a.faite} / ${a.rues}</b><span>rues faites</span></div>
+    <div class="kpi"><b>${a.encours}</b><span>rues commencées</span></div>
+    <div class="kpi"><b>${a.arepasser}</b><span>rues à repasser</span></div>
+  </div>`;
+}
+
+function renderAll() {
+  const a = agg(S.secteurs), depart = S.equipes.reduce((t, e) => t + (Number(e.depart) || 0), 0);
+  let h = `<div class="hero"><span class="num">${eur(a.somme)}</span><span class="muted">collectés sur la tournée</span></div>` + kpis(a, depart);
+  if (S.admin) h += `<div class="bar"><button class="btn" data-act="settings">Plan et réglages</button><span class="grow"></span><button class="btn primary" data-act="new-team">Nouvelle équipe</button></div>`;
+  h += mapHTML(null);
+  const s = sector(S.sel);
+  if (s) h += `<div class="card" style="margin-top:12px">${sectorBlock(s, S.canWrite, true)}</div>`;
+  else if (S.secteurs.length) h += `<p class="hint">Touchez un secteur sur le plan pour voir ses rues.</p>`;
+
+  h += `<h2 style="margin:22px 0 10px">Équipes</h2>`;
+  if (!S.equipes.length) h += `<div class="empty"><strong>Aucune équipe</strong>${S.admin ? "Créez vos binômes et trinômes avec leur nombre de calendriers au départ." : "Un admin doit d'abord créer les équipes."}</div>`;
+  for (const t of S.equipes) {
+    const secs = teamSectors(t.id), ta = agg(secs), dep = Number(t.depart) || 0, isOpen = S.open.has(t.id);
+    const stale = ta.maj && ta.faite < ta.rues && Date.now() - ta.maj > 45 * 60000;
+    h += `<section class="card"><div class="team-head" data-act="toggle-team" data-id="${t.id}" role="button" tabindex="0" aria-expanded="${isOpen}">
+      <div><h2><span class="swatch" style="background:${t.couleur || COLORS[0]}"></span>${esc(t.nom)}</h2>${t.membres ? `<div class="hint">${esc(t.membres)}</div>` : ""}</div>
+      <div class="num" style="font-size:1.4rem;white-space:nowrap">${eur(ta.somme)}</div></div>
+      <div class="line"><span><strong>${ta.vendus}</strong>${dep ? " / " + dep : ""} cal. vendus</span>${dep ? `<span><strong>${dep - ta.vendus}</strong> restants</span>` : ""}
+      <span><strong>${ta.faite}/${ta.rues}</strong> rues</span>${ta.arepasser ? `<span style="color:var(--redo)"><strong style="color:inherit">${ta.arepasser}</strong> à repasser</span>` : ""}
+      <span style="${stale ? "color:var(--danger)" : ""}">${stale ? "sans nouvelles " : ""}${ago(ta.maj)}</span></div>
+      ${progressHTML(ta)}
+      ${isOpen ? (secs.length ? secs.map(s => sectorBlock(s, S.canWrite, false)).join("") : `<p class="hint">Aucun secteur attribué.</p>`) +
+        (S.admin ? `<div class="bar"><span class="grow"></span><button class="btn small" data-act="edit-team" data-id="${t.id}">Modifier l'équipe</button><button class="btn small danger" data-act="del-team" data-id="${t.id}">Supprimer</button></div>` : "") : ""}
+    </section>`;
+  }
+  const orphans = S.secteurs.filter(s => !team(s.equipeId));
+  if (orphans.length && S.admin) h += `<p class="hint">Secteurs sans équipe : ${orphans.map(s => esc(s.nom)).join(", ")}. Touchez-les sur le plan puis « Modifier » pour les attribuer.</p>`;
+  return h;
+}
+
+function renderMine() {
+  const mine = lsGet("tournee-cal-equipe"), t = team(mine);
+  let h = `<select id="pick" aria-label="Choisir mon équipe" style="margin-bottom:14px"><option value="">Choisir mon équipe…</option>${S.equipes.map(e => `<option value="${e.id}" ${e.id === mine ? "selected" : ""}>${esc(e.nom)}</option>`).join("")}</select>`;
+  if (!S.equipes.length) return h + `<div class="empty"><strong>Aucune équipe</strong>Un admin doit d'abord créer les équipes.</div>`;
+  if (!t) return h + `<div class="empty"><strong>Quelle est votre équipe ?</strong>Choisissez-la une fois, elle restera sélectionnée sur ce téléphone.</div>`;
+  const secs = teamSectors(t.id), a = agg(secs), dep = Number(t.depart) || 0;
+  h += `<div class="hero"><span class="num">${eur(a.somme)}</span><span class="muted">collectés par ${esc(t.nom)}</span></div>` + kpis(a, dep);
+  if (!S.canWrite) h += `<p class="hint">Vous pouvez consulter cette tournée mais pas la mettre à jour.</p>`;
+  h += mapHTML(t.id);
+  if (!secs.length) h += `<div class="empty" style="margin-top:12px"><strong>Aucun secteur attribué</strong>Demandez à un admin de vous attribuer un secteur.</div>`;
+  else h += `<p class="hint" style="margin-top:12px">Touchez une rue pour noter où vous en êtes.</p>` + secs.map(s => `<div class="card">${sectorBlock(s, S.canWrite, false)}</div>`).join("");
+  return h;
+}
+
+function render() {
+  $("#tab-all").setAttribute("aria-selected", S.tab === "all");
+  $("#tab-mine").setAttribute("aria-selected", S.tab === "mine");
+  if (S.cfg.titre) $("#title").textContent = S.cfg.titre;
+  const v = $("#view");
+  if (!S.db) { $("#sub").textContent = ""; v.innerHTML = `<div class="empty"><strong>Données partagées indisponibles</strong>Ouvrez la page publiée en étant connecté.</div>`; return; }
+  if (S.got < 3) return;
+  $("#sub").textContent = `${S.equipes.length} équipe${S.equipes.length > 1 ? "s" : ""}, ${S.secteurs.length} secteur${S.secteurs.length > 1 ? "s" : ""}` + (S.cfg.ville ? ` à ${S.cfg.ville}` : "");
+  const sx = $("#mapwrap") ? [$("#mapwrap").scrollLeft, $("#mapwrap").scrollTop] : null;
+  v.innerHTML = S.tab === "all" ? renderAll() : renderMine();
+  if (sx && $("#mapwrap")) { $("#mapwrap").scrollLeft = sx[0]; $("#mapwrap").scrollTop = sx[1]; }
+}
+
+// ---------- dialogs
+let onSubmit = null;
+function dialog(html, submit) {
+  $("#dform").innerHTML = html; onSubmit = submit; $("#dlg").showModal();
+}
+$("#dform").addEventListener("submit", async e => {
+  e.preventDefault();
+  if (!onSubmit) return;
+  const btn = $("#dform").querySelector("[type=submit]"); if (btn) btn.disabled = true;
+  try { const ok = await onSubmit(); if (ok !== false) $("#dlg").close(); }
+  finally { if (btn) btn.disabled = false; }
+});
+$("#dform").addEventListener("click", e => {
+  if (e.target.closest("[data-close]")) { e.preventDefault(); $("#dlg").close(); }
+  const st = e.target.closest("[data-step]");
+  if (st) { const i = $("#f-vendus"); i.value = Math.max(0, (parseInt(i.value) || 0) + Number(st.dataset.step)); }
+});
+$("#dform").addEventListener("change", e => { if (e.target.name === "etat") syncEtat(); });
+function syncEtat() {
+  const v = ($("#dform").querySelector("[name=etat]:checked") || {}).value;
+  const a = $("#w-arret"), n = $("#w-note");
+  if (a) a.hidden = v !== "encours"; if (n) n.hidden = v !== "arepasser";
+}
+const num = v => { const n = parseFloat(String(v).replace(",", ".").replace(/\s/g, "")); return isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : 0; };
+
+async function write(fn, msg) {
+  try { await fn(); return true; }
+  catch (e) {
+    if (e && e.code === "invalid_argument") toast("Vous n'avez pas le droit de faire cette modification");
+    else if (e && e.code === "quota_exceeded") toast("Limite de stockage atteinte");
+    else toast(msg || "Pas enregistré, réessayez");
+    return false;
+  }
+}
+
+function openRue(sid, rid) {
+  const s = sector(sid); if (!s) return;
+  const r = streets(s).find(x => x.id === rid); if (!r) return;
+  dialog(`<h2>${esc(r.nom)}</h2><p class="hint" style="margin:2px 0 0">${esc(s.nom)}</p>
+    <label>Où en est la rue ?</label>
+    <div class="seg">${Object.entries(ETATS).map(([k, l]) => `<label><input type="radio" name="etat" value="${k}" ${r.etat === k ? "checked" : ""}>${l}</label>`).join("")}</div>
+    <div id="w-arret"><label for="f-arret">Arrêtée à</label><input id="f-arret" maxlength="80" placeholder="n° 24, ou angle rue Pasteur" value="${esc(r.arret || "")}"></div>
+    <div id="w-note"><label for="f-note">À repasser <span class="hint">numéros absents, horaires…</span></label><textarea id="f-note" rows="2" maxlength="300" placeholder="n° 3, 7 et 12 absents, repasser samedi matin">${esc(r.note || "")}</textarea></div>
+    <label for="f-vendus">Calendriers vendus dans la rue</label>
+    <div class="stepper"><button type="button" data-step="-1" aria-label="Un de moins">−</button><input id="f-vendus" type="number" inputmode="numeric" min="0" value="${r.vendus}"><button type="button" data-step="1" aria-label="Un de plus">+</button></div>
+    <label for="f-somme">Somme encaissée dans la rue (€)</label>
+    <input id="f-somme" inputmode="decimal" value="${r.somme ? String(r.somme).replace(".", ",") : ""}" placeholder="0">
+    <div class="row"><button type="button" class="btn" data-close>Annuler</button><button type="submit" class="btn primary">Enregistrer</button></div>`,
+  () => {
+    const etat = ($("#dform").querySelector("[name=etat]:checked") || {}).value || "afaire";
+    const now = Date.now();
+    const data = { etat, arret: $("#f-arret").value.trim(), note: $("#f-note").value.trim(), vendus: Math.round(num($("#f-vendus").value)), somme: num($("#f-somme").value), maj: now };
+    if (etat === "arepasser" || r.repasse) data.repasse = true;
+    return write(() => S.db.collection("secteurs").doc(sid).update({ suivi: { [rid]: data }, majA: now }));
+  });
+  syncEtat();
+}
+
+function addRue(sid) {
+  dialog(`<h2>Ajouter une rue</h2><label for="f-rue">Nom de la rue</label><input id="f-rue" required maxlength="100" placeholder="Rue Victor Hugo">
+    <div class="row"><button type="button" class="btn" data-close>Annuler</button><button type="submit" class="btn primary">Ajouter</button></div>`,
+  () => { const nom = $("#f-rue").value.trim(); if (!nom) return false;
+    return write(() => S.db.collection("secteurs").doc(sid).update({ rues: { [uid()]: { nom, ordre: Date.now() } } })); });
+}
+
+function colorPicker(cur) {
+  return `<div class="colors">${COLORS.map(c => `<label style="background:${c}" aria-label="Couleur ${c}"><input type="radio" name="col" value="${c}" ${c === cur ? "checked" : ""}></label>`).join("")}</div>`;
+}
+function openTeam(t) {
+  const used = S.equipes.map(e => e.couleur), def = t ? t.couleur : (COLORS.find(c => !used.includes(c)) || COLORS[0]);
+  dialog(`<h2>${t ? "Modifier l'équipe" : "Nouvelle équipe"}</h2>
+    <label for="f-nom">Nom</label><input id="f-nom" required maxlength="60" placeholder="Binôme 1" value="${esc(t ? t.nom : "")}">
+    <label for="f-mem">Membres <span class="hint">(facultatif)</span></label><input id="f-mem" maxlength="120" placeholder="Léa, Karim" value="${esc(t ? t.membres || "" : "")}">
+    <label for="f-dep">Calendriers au départ</label><input id="f-dep" type="number" inputmode="numeric" min="0" value="${t ? t.depart || "" : ""}" placeholder="120">
+    <label>Couleur sur le plan</label>${colorPicker(def)}
+    <div class="row"><button type="button" class="btn" data-close>Annuler</button><button type="submit" class="btn primary">${t ? "Enregistrer" : "Créer"}</button></div>`,
+  () => {
+    const nom = $("#f-nom").value.trim(); if (!nom) return false;
+    const data = { nom, membres: $("#f-mem").value.trim(), depart: Math.round(num($("#f-dep").value)), couleur: ($("#dform").querySelector("[name=col]:checked") || {}).value || def, creeA: t ? t.creeA || Date.now() : Date.now() };
+    return write(() => t ? S.db.collection("equipes").doc(t.id).set(data) : S.db.collection("equipes").add(data));
+  });
+}
+
+function openSector(s, points) {
+  const cur = s ? streets(s).map(r => r.nom).join("\n") : "";
+  dialog(`<h2>${s ? "Modifier le secteur" : "Nouveau secteur"}</h2>
+    <label for="f-nom">Nom du secteur</label><input id="f-nom" required maxlength="40" placeholder="Secteur A" value="${esc(s ? s.nom : "")}">
+    <label for="f-eq">Équipe</label><select id="f-eq"><option value="">Pas encore attribué</option>${S.equipes.map(e => `<option value="${e.id}" ${s && s.equipeId === e.id ? "selected" : ""}>${esc(e.nom)}</option>`).join("")}</select>
+    <label for="f-rues">Rues du secteur <span class="hint">une par ligne</span></label>
+    <textarea id="f-rues" rows="8" placeholder="Rue Victor Hugo&#10;Avenue Jean Jaurès&#10;Impasse des Lilas">${esc(cur)}</textarea>
+    ${s ? `<p class="hint">Retirer une rue de la liste efface aussi ce qui a été noté pour elle.</p>` : ""}
+    <div class="row"><button type="button" class="btn" data-close>Annuler</button><button type="submit" class="btn primary">${s ? "Enregistrer" : "Créer le secteur"}</button></div>`,
+  () => {
+    const nom = $("#f-nom").value.trim(); if (!nom) return false;
+    const names = $("#f-rues").value.split("\n").map(x => x.trim()).filter(Boolean).slice(0, 300);
+    const old = s ? streets(s) : [], used = new Set(), rues = {}, suivi = {};
+    names.forEach((n, i) => {
+      const m = old.find(o => o.nom === n && !used.has(o.id));
+      const id = m ? m.id : uid(); if (m) used.add(m.id);
+      rues[id] = { nom: n, ordre: i };
+      if (m && s.suivi && s.suivi[id]) suivi[id] = s.suivi[id];
+    });
+    const data = { nom, equipeId: $("#f-eq").value || null, points: points || (s && s.points) || [], rues, suivi, majA: s ? s.majA || null : null, creeA: s ? s.creeA || Date.now() : Date.now() };
+    return write(async () => {
+      if (s) await S.db.collection("secteurs").doc(s.id).set(data);
+      else { const ref = await S.db.collection("secteurs").add(data); S.sel = ref.id; }
+    });
+  });
+}
+
+function openSettings() {
+  const c = S.cfg;
+  dialog(`<h2>Plan et réglages</h2>
+    <label for="f-titre">Titre</label><input id="f-titre" maxlength="60" value="${esc(c.titre || "")}" placeholder="Tournée des calendriers 2027">
+    <label for="f-ville">Commune <span class="hint">pour les liens Google Maps</span></label><input id="f-ville" maxlength="60" value="${esc(c.ville || "")}" placeholder="Villeurbanne">
+    <label for="f-plan">Image du plan ${c.planId ? `<span class="hint">(laisser vide pour garder l'actuelle)</span>` : ""}</label>
+    ${S.assets ? `<input id="f-plan" type="file" accept="image/png,image/jpeg,image/webp">
+    <p class="hint">Astuce : faites une capture d'écran de Google Maps sur la zone, en vue plan. Si vous changez d'image, redessinez les secteurs.</p>` : `<p class="hint">L'ajout d'image n'est pas disponible dans cette vue.</p>`}
+    <div class="row"><button type="button" class="btn" data-close>Annuler</button><button type="submit" class="btn primary">Enregistrer</button></div>`,
+  async () => {
+    const data = { ...S.cfg, titre: $("#f-titre").value.trim(), ville: $("#f-ville").value.trim() };
+    const f = $("#f-plan") && $("#f-plan").files[0];
+    if (f) {
+      if (f.size > 20 * 1024 * 1024) { toast("Image trop lourde (20 Mo maximum)"); return false; }
+      toast("Envoi du plan…");
+      try {
+        const size = await new Promise((ok, ko) => { const img = new Image(); img.onload = () => ok([img.naturalWidth, img.naturalHeight]); img.onerror = ko; img.src = URL.createObjectURL(f); });
+        const up = await S.assets.upload(f);
+        Object.assign(data, { planId: up.id, planW: size[0], planH: size[1] });
+      } catch (e) { toast("Impossible d'envoyer cette image"); return false; }
+    }
+    return write(() => S.db.doc("config/main").set(data));
+  });
+}
+
+// ---------- events
+$("#tab-all").onclick = () => { S.tab = "all"; render(); };
+$("#tab-mine").onclick = () => { S.tab = "mine"; S.drawing = null; S.redrawId = null; render(); };
+$("#view").addEventListener("change", e => { if (e.target.id === "pick") { lsSet("tournee-cal-equipe", e.target.value); render(); } });
+$("#view").addEventListener("keydown", e => { if ((e.key === "Enter" || e.key === " ") && e.target.matches("[data-act=toggle-team]")) { e.preventDefault(); e.target.click(); } });
+$("#view").addEventListener("click", async e => {
+  if (e.target.closest("a")) return;
+  const svg = e.target.closest("#map");
+  if (svg && S.drawing) {
+    const b = svg.getBoundingClientRect();
+    S.drawing.push([Math.min(1, Math.max(0, (e.clientX - b.left) / b.width)), Math.min(1, Math.max(0, (e.clientY - b.top) / b.height))]);
+    return render();
+  }
+  const poly = e.target.closest("[data-sec]");
+  if (poly) { S.sel = S.sel === poly.dataset.sec ? null : poly.dataset.sec; return render(); }
+  const rue = e.target.closest("[data-rue]");
+  if (rue) { const [a, b] = rue.dataset.rue.split("|"); return openRue(a, b); }
+  const el = e.target.closest("[data-act]"); if (!el) return;
+  const id = el.dataset.id;
+  switch (el.dataset.act) {
+    case "zoom": S.zoom = Math.min(4, Math.max(1, S.zoom + Number(el.dataset.z) * 0.5)); return render();
+    case "toggle-team": S.open.has(id) ? S.open.delete(id) : S.open.add(id); return render();
+    case "settings": return openSettings();
+    case "new-team": return openTeam(null);
+    case "edit-team": return openTeam(team(id));
+    case "del-team": { const t = team(id); if (t && confirm(`Supprimer l'équipe « ${t.nom} » ? Ses secteurs resteront, sans équipe.`)) write(() => S.db.collection("equipes").doc(id).delete()); return; }
+    case "add-rue": return addRue(id);
+    case "edit-sec": return openSector(sector(id));
+    case "del-sec": { const s = sector(id); if (s && confirm(`Supprimer le secteur « ${s.nom} » et tout ce qui a été noté dedans ?`)) { if (S.sel === id) S.sel = null; write(() => S.db.collection("secteurs").doc(id).delete()); } return; }
+    case "draw": S.drawing = []; S.redrawId = null; S.tab = "all"; render(); $("#mapwrap") && $("#mapwrap").scrollIntoView({ block: "center" }); return;
+    case "redraw": S.drawing = []; S.redrawId = id; S.tab = "all"; render(); $("#mapwrap") && $("#mapwrap").scrollIntoView({ block: "center" }); return;
+    case "undo": S.drawing.pop(); return render();
+    case "cancel-draw": S.drawing = null; S.redrawId = null; return render();
+    case "finish-draw": {
+      const pts = S.drawing.map(p => [Math.round(p[0] * 10000) / 10000, Math.round(p[1] * 10000) / 10000]);
+      const rid = S.redrawId; S.drawing = null; S.redrawId = null; render();
+      if (rid) { await write(() => S.db.collection("secteurs").doc(rid).update({ points: pts })); S.sel = rid; render(); }
+      else openSector(null, pts);
+      return;
+    }
+  }
+});
+
+// ---------- start
+render();
+setInterval(() => { if (S.got >= 3 && !S.drawing && !$("#dlg").open) render(); }, 30000);
+(async () => {
+  const use = n => window.claude && window.claude.use ? window.claude.use(n) : Promise.resolve(null);
+  const [db, user, assets] = await Promise.all([use("db"), use("user"), use("assets")]);
+  S.db = db; S.assets = assets;
+  if (user) {
+    S.admin = await user.canEdit().catch(() => false);
+    if ((await user.can("data.write").catch(() => null)) === false) S.canWrite = false;
+  }
+  if (!db) return render();
+  if (!S.admin) S.tab = "mine";
+  const done = { c: 0, e: 0, s: 0 };
+  const mark = k => { if (!done[k]) { done[k] = 1; S.got++; } render(); };
+  const fail = () => toast("Connexion perdue, rechargez la page");
+  db.doc("config/main").onSnapshot(d => { S.cfg = d.exists ? d.data() : {}; mark("c"); }, fail);
+  db.collection("equipes").orderBy("creeA").onSnapshot(q => { S.equipes = q.docs.map(d => ({ id: d.id, ...d.data() })); mark("e"); }, fail);
+  db.collection("secteurs").orderBy("creeA").onSnapshot(q => { S.secteurs = q.docs.map(d => ({ id: d.id, ...d.data() })); if (S.sel && !sector(S.sel)) S.sel = null; mark("s"); }, fail);
+})();
+</script>
+</body>
+</html>
