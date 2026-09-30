@@ -1,6 +1,6 @@
 "use client";
 
-import { agreger } from "@/lib/agregats";
+import { agreger, avancement, distance } from "@/lib/agregats";
 import { eur, lienMaps } from "@/lib/format";
 import { ETATS, GRIS, type Equipe, type Rue, type Secteur } from "@/lib/types";
 import { Epingle, Progression } from "./ui";
@@ -61,6 +61,7 @@ export function BlocSecteur({
   actions: ActionsSecteur;
 }) {
   const a = agreger(rues);
+  const av = avancement(rues);
   return (
     <>
       <div className="sector-title">
@@ -69,7 +70,8 @@ export function BlocSecteur({
           {secteur.nom}
         </h3>
         <span className="hint">
-          {a.faite}/{a.rues} rues
+          {a.faite}/{a.rues} rues{a.rues ? <> · <strong style={{ color: "var(--ink)" }}>{av.pct} %</strong></> : null}
+          {av.metresTotal ? ` (${distance(av.metresFaits)} sur ${distance(av.metresTotal)})` : ""}
         </span>
       </div>
       {montrerEquipe && (

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { GeoJSONSource, Map as MapboxMap, MapMouseEvent, Marker } from "mapbox-gl";
 import type { Feature, FeatureCollection, Polygon } from "geojson";
-import { agreger } from "@/lib/agregats";
+import { avancement } from "@/lib/agregats";
 import { GRIS, type Config, type Equipe, type LngLat, type Rue, type Secteur } from "@/lib/types";
 import { Etoile, Loupe } from "./icones";
 import { toast } from "./ui";
@@ -93,8 +93,8 @@ export default function Carte(p: Props) {
     const etiquettes: Etiquette[] = [];
     for (const s of p.secteurs) {
       if (!Array.isArray(s.contour) || s.contour.length < 3 || s.id === redessinId) continue;
-      const a = agreger(p.rues.filter((r) => r.secteur_id === s.id));
-      const pct = a.rues ? Math.round((a.faite / a.rues) * 100) : null;
+      const ruesS = p.rues.filter((r) => r.secteur_id === s.id);
+      const pct = ruesS.length ? avancement(ruesS).pct : null;
       const c = (s.equipe_id && couleur.get(s.equipe_id)) || GRIS;
       const estompe = p.focusEquipe ? s.equipe_id !== p.focusEquipe : false;
       zones.push({

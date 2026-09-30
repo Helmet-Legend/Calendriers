@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { cleNom, ruesOsm } from "@/lib/osm";
 import { supabase } from "@/lib/supabase";
-import { agreger } from "@/lib/agregats";
+import { agreger, avancement } from "@/lib/agregats";
 import { eur, ilya } from "@/lib/format";
 import type { Donnees } from "@/lib/useTournee";
 import { GRIS, type Config, type Equipe, type LngLat, type Rue, type Secteur } from "@/lib/types";
@@ -116,8 +116,8 @@ function ListeSecteurs({ d, ruesDu, selection, onSelect }: {
       {!d.secteurs.length && <p className="hint" style={{ margin: 0 }}>Aucun secteur pour l&apos;instant.</p>}
       <ul className="liste-secteurs">
         {d.secteurs.map((s) => {
-          const a = agreger(ruesDu(s.id));
-          const pct = a.rues ? Math.round((a.faite / a.rues) * 100) : 0;
+          const rs = ruesDu(s.id);
+          const pct = rs.length ? avancement(rs).pct : 0;
           const c = couleur(s);
           return (
             <li key={s.id}>
@@ -127,7 +127,7 @@ function ListeSecteurs({ d, ruesDu, selection, onSelect }: {
                   <span className="nom">{libelle(s.nom)}</span>
                   <span className="jauge" style={{ marginTop: 0 }}><i style={{ width: `${pct}%`, background: c }} /></span>
                 </span>
-                <span className="val">{a.rues ? `${pct} %` : "—"}</span>
+                <span className="val">{rs.length ? `${pct} %` : "—"}</span>
                 <Chevron />
               </button>
             </li>
@@ -138,8 +138,8 @@ function ListeSecteurs({ d, ruesDu, selection, onSelect }: {
   );
 }
 
-function Progression({ a, depart }: { a: ReturnType<typeof agreger>; depart: number }) {
-  const pct = depart ? Math.min(100, Math.round((a.vendus / depart) * 100)) : a.rues ? Math.round((a.faite / a.rues) * 100) : 0;
+function Progression({ a, depart, rues }: { a: ReturnType<typeof agreger>; depart: number; rues: Rue[] }) {
+  const pct = depart ? Math.min(100, Math.round((a.vendus / depart) * 100)) : avancement(rues).pct;
   const tour = 2 * Math.PI * 52;
   return (
     <section className="carte-blanche bloc" id="progression">
@@ -203,7 +203,7 @@ export function VueEnsemble({ d, config, dessinDemande, onDessinActif }: {
         </div>
         <div className="droite">
           <ListeSecteurs d={d} ruesDu={a.ruesDu} selection={a.selection} onSelect={choisir} />
-          <Progression a={total} depart={depart} />
+          <Progression a={total} depart={depart} rues={d.rues} />
         </div>
       </div>
 
