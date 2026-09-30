@@ -2,7 +2,7 @@
 // - pages : réseau d'abord, copie en cache en secours ;
 // - fichiers de l'application (/_next/static) : cache d'abord (ils ne changent jamais) ;
 // - Supabase, Mapbox, OpenStreetMap : jamais interceptés (données en direct).
-const VERSION = "tournee-v1";
+const VERSION = "tournee-v2";
 const DE_BASE = ["/", "/equipe", "/sete-bandeau.jpg", "/icone-192.png", "/apple-touch-icon.png"];
 
 self.addEventListener("install", (e) => {

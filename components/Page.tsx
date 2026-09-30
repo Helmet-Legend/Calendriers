@@ -39,7 +39,8 @@ export function Cadre({
     <div className="app" id="haut">
       {menu && (
         <nav className="side" aria-label="Navigation principale">
-          <div className="logo"><Calendrier size={40} /></div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="logo" src="/icone-192.png" alt="Tournée des calendriers" width={78} height={78} />
           <a href="#haut" aria-current="page"><Calendrier size={32} />Tournée</a>
           <a href="#equipes"><Groupe size={32} />Équipes</a>
           <a href="#secteurs"><Repere size={32} />Secteurs</a>
