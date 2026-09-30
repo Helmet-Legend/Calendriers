@@ -6,6 +6,7 @@ import { ruesDansZone } from "@/lib/osm";
 import { eur, ilya, messageErreur, montant } from "@/lib/format";
 import { COULEURS, ETATS, type Config, type Equipe, type Etat, type Historique, type LngLat, type Rue, type Secteur } from "@/lib/types";
 import { Boutons, Modal, toast } from "./ui";
+import { libelle } from "./Carte";
 
 /** Exécute une écriture Supabase et signale l'échec ; renvoie false pour garder le dialogue ouvert. */
 export async function ecrire(f: () => PromiseLike<{ error: unknown }>): Promise<boolean> {
@@ -23,7 +24,9 @@ const saisie = (n: number) => (n ? String(n).replace(".", ",") : "");
 
 // ---------------------------------------------------------------- rue
 
-export function DialogueRue({ rue, secteur, equipes, onClose }: { rue: Rue; secteur: Secteur; equipes: Equipe[]; onClose: () => void }) {
+export function DialogueRue({ rue, secteur, ruesSecteur, equipes, onClose }: {
+  rue: Rue; secteur: Secteur; ruesSecteur: Rue[]; equipes: Equipe[]; onClose: () => void;
+}) {
   const [etat, setEtat] = useState<Etat>(rue.etat);
   const [arret, setArret] = useState(rue.arret);
   const [note, setNote] = useState(rue.note);
@@ -37,16 +40,41 @@ export function DialogueRue({ rue, secteur, equipes, onClose }: { rue: Rue; sect
       .then(({ data }) => setHisto((data as Historique[]) ?? []));
   }, [rue.id]);
 
+  // Avancement du secteur, recalculé avec l'état choisi pour cette rue.
+  const total = ruesSecteur.length;
+  const faitesAvant = ruesSecteur.filter((r) => r.etat === "faite").length;
+  const faitesApres = ruesSecteur.filter((r) => (r.id === rue.id ? etat : r.etat) === "faite").length;
+  const pctAvant = total ? Math.round((faitesAvant / total) * 100) : 0;
+  const pctApres = total ? Math.round((faitesApres / total) * 100) : 0;
+
   const pas = (d: number) => setVendus(String(Math.max(0, (parseInt(vendus) || 0) + d)));
   const nomEquipe = (id: string | null) => equipes.find((e) => e.id === id)?.nom ?? "admin";
 
-  return (
-    <Modal onClose={onClose} onSubmit={() => ecrire(() => supabase.rpc("noter_rue", {
+  const enregistrer = async () => {
+    const ok = await ecrire(() => supabase.rpc("noter_rue", {
       p_rue: rue.id, p_etat: etat, p_arret: arret.trim(), p_note: note.trim(),
       p_vendus: Math.round(montant(vendus)), p_especes: montant(especes), p_cheques: montant(cheques),
-    }))}>
+    }));
+    if (ok && faitesApres !== faitesAvant)
+      toast(`${libelle(secteur.nom)} : ${pctApres} % des rues faites (${faitesApres}/${total})`);
+    return ok;
+  };
+
+  return (
+    <Modal onClose={onClose} onSubmit={enregistrer}>
       <h2>{rue.nom}</h2>
-      <p className="hint" style={{ margin: "2px 0 0" }}>{secteur.nom}</p>
+      <p className="hint" style={{ margin: "2px 0 0" }}>{libelle(secteur.nom)}</p>
+      <div className="avancement" aria-live="polite">
+        <div className="av-ligne">
+          <span>Avancement du secteur</span>
+          <b>
+            {pctApres !== pctAvant ? <><s>{pctAvant} %</s> → </> : null}
+            {pctApres} %
+          </b>
+        </div>
+        <div className="jauge"><i style={{ width: `${pctApres}%`, background: "var(--done)" }} /></div>
+        <span className="hint">{faitesApres} rue{faitesApres > 1 ? "s" : ""} faite{faitesApres > 1 ? "s" : ""} sur {total}</span>
+      </div>
       <label>Où en est la rue ?</label>
       <div className="seg">
         {(Object.keys(ETATS) as Etat[]).map((k) => (

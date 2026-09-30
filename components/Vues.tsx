@@ -1,7 +1,8 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { cleNom, ruesOsm } from "@/lib/osm";
 import { supabase } from "@/lib/supabase";
 import { agreger } from "@/lib/agregats";
 import { eur, ilya } from "@/lib/format";
@@ -61,7 +62,7 @@ function useActions(d: Donnees, admin: boolean, peutNoter: (s: Secteur) => boole
   if (dialogue?.t === "rue") {
     const rue = d.rues.find((r) => r.id === dialogue.rue.id) ?? dialogue.rue;
     const secteur = d.secteurs.find((s) => s.id === rue.secteur_id);
-    if (secteur) rendu = <DialogueRue rue={rue} secteur={secteur} equipes={d.equipes} onClose={fermer} />;
+    if (secteur) rendu = <DialogueRue rue={rue} secteur={secteur} ruesSecteur={ruesDu(secteur.id)} equipes={d.equipes} onClose={fermer} />;
   } else if (dialogue?.t === "ajout-rue") rendu = <DialogueAjoutRue secteur={dialogue.secteur} onClose={fermer} />;
   else if (dialogue?.t === "equipe") rendu = <DialogueEquipe equipe={dialogue.equipe} equipes={d.equipes} onClose={fermer} />;
   else if (dialogue?.t === "secteur")
@@ -71,6 +72,33 @@ function useActions(d: Donnees, admin: boolean, peutNoter: (s: Secteur) => boole
     );
 
   return { selection, setSelection, redessin, setRedessin, setDialogue, actions, ruesDu, onDessin, rendu };
+}
+
+/**
+ * Récupère une fois le tracé OpenStreetMap des rues qui n'en ont pas encore,
+ * pour pouvoir les surligner sur la carte. Rue introuvable → tracé vide (pas de nouvel essai).
+ */
+function useTraces(d: Donnees, equipeId?: string) {
+  const tentes = useRef(new Set<string>());
+  useEffect(() => {
+    const aFaire = d.secteurs.filter((s) =>
+      (!equipeId || s.equipe_id === equipeId) && s.contour.length >= 3 && !tentes.current.has(s.id) && d.rues.some((r) => r.secteur_id === s.id && r.trace === null));
+    if (!aFaire.length) return;
+    aFaire.forEach((s) => tentes.current.add(s.id));
+    (async () => {
+      for (const s of aFaire) {
+        try {
+          const osm = await ruesOsm(s.contour);
+          for (const r of d.rues.filter((x) => x.secteur_id === s.id && x.trace === null)) {
+            const trouvee = osm.get(cleNom(r.nom));
+            await supabase.rpc("definir_trace", { p_rue: r.id, p_trace: trouvee?.trace ?? [] });
+          }
+        } catch {
+          tentes.current.delete(s.id); // OpenStreetMap indisponible : on réessaiera plus tard
+        }
+      }
+    })();
+  }, [d.secteurs, d.rues, equipeId]);
 }
 
 const cadrer = (c: { lng: number; lat: number; zoom: number }) =>
@@ -143,6 +171,7 @@ export function VueEnsemble({ d, config, dessinDemande, onDessinActif }: {
 }) {
   const [ouvertes, setOuvertes] = useState<Set<string>>(new Set());
   const a = useActions(d, true, () => true);
+  useTraces(d);
   const total = agreger(d.rues);
   const depart = d.equipes.reduce((t, e) => t + (Number(e.depart) || 0), 0);
   const choisi = d.secteurs.find((s) => s.id === a.selection);
@@ -245,6 +274,7 @@ export function VueEnsemble({ d, config, dessinDemande, onDessinActif }: {
 
 export function VueEquipe({ d, config, equipeId, admin }: { d: Donnees; config: Config; equipeId: string; admin: boolean }) {
   const a = useActions(d, false, (s) => admin || s.equipe_id === equipeId);
+  useTraces(d, equipeId);
   const t = d.equipes.find((e) => e.id === equipeId);
   if (!t) return <div className="empty"><strong>Équipe introuvable</strong>Elle a peut-être été supprimée. Demandez un nouveau lien à votre responsable.</div>;
   const secs = d.secteurs.filter((s) => s.equipe_id === t.id);

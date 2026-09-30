@@ -182,6 +182,11 @@ input, textarea, select { background: var(--surface); border: 1px solid var(--li
 .colors input { position: absolute; opacity: 0; width: 1px; height: 1px }
 .colors label:has(input:checked) { border-color: var(--ink) }
 .row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; flex-wrap: wrap }
+.avancement { margin-top: 14px; padding: 12px 14px; border-radius: 12px; background: #EEF6F1; border: 1px solid #CDE7D6 }
+.av-ligne { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-weight: 600 }
+.av-ligne b { font-family: var(--font-barlow-condensed), sans-serif; font-size: 1.5rem; color: #1E8A4C }
+.av-ligne s { color: var(--muted); font-size: 1.1rem; font-weight: 600 }
+.avancement .jauge { margin: 6px 0 4px; height: 10px; background: #D7E9DE }
 .copie { display: flex; gap: 6px }
 .copie input { font-size: .85rem }
 .histo { list-style: none; margin: 6px 0 0; padding: 0; font-size: .88rem; color: var(--muted) }

@@ -48,6 +48,8 @@ export interface Rue {
   cheques: number;
   repasse: boolean;
   maj_a: string | null;
+  /** Tracé OpenStreetMap : null = pas encore cherché, [] = introuvable. */
+  trace: LngLat[][] | null;
 }
 
 export interface Historique {

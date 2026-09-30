@@ -104,7 +104,22 @@ export default function Carte(p: Props) {
       });
       etiquettes.push({ id: s.id, nom: s.nom, couleur: c, pct, estompe, pos: centre(s.contour) });
     }
-    return { zones: { type: "FeatureCollection", features: zones } as FeatureCollection, etiquettes };
+    // Rues surlignées selon leur état (le tracé vient d'OpenStreetMap).
+    const secteurEquipe = new Map(p.secteurs.map((s) => [s.id, s.equipe_id]));
+    const traces: Feature[] = [];
+    for (const r of p.rues) {
+      if (r.etat === "afaire" || !r.trace?.length || r.secteur_id === redessinId || !secteurEquipe.has(r.secteur_id)) continue;
+      traces.push({
+        type: "Feature",
+        properties: { etat: r.etat, estompe: p.focusEquipe ? secteurEquipe.get(r.secteur_id) !== p.focusEquipe : false },
+        geometry: { type: "MultiLineString", coordinates: r.trace },
+      });
+    }
+    return {
+      zones: { type: "FeatureCollection", features: zones } as FeatureCollection,
+      traces: { type: "FeatureCollection", features: traces } as FeatureCollection,
+      etiquettes,
+    };
   }, [p.secteurs, p.equipes, p.rues, p.focusEquipe, p.selection, redessinId]);
 
   const dessinGeo = useMemo<FeatureCollection>(() => {
@@ -139,6 +154,7 @@ export default function Carte(p: Props) {
       // Sources et calques, à réinstaller après chaque changement de fond (plan / satellite).
       m.on("style.load", () => {
         m.addSource("zones", { type: "geojson", data: vide });
+        m.addSource("traces", { type: "geojson", data: vide });
         m.addSource("dessin", { type: "geojson", data: vide });
         m.addLayer({
           id: "zones-fond", type: "fill", source: "zones",
@@ -152,6 +168,21 @@ export default function Carte(p: Props) {
             "line-opacity": ["case", ["get", "estompe"], 0.35, 1],
           },
           layout: { "line-join": "round" },
+        });
+        const opacite = ["case", ["get", "estompe"], 0.35, 1] as const;
+        m.addLayer({
+          id: "traces-contour", type: "line", source: "traces",
+          layout: { "line-join": "round", "line-cap": "round" },
+          paint: { "line-color": "#ffffff", "line-width": ["interpolate", ["linear"], ["zoom"], 13, 5, 17, 13], "line-opacity": opacite as never },
+        });
+        m.addLayer({
+          id: "traces", type: "line", source: "traces",
+          layout: { "line-join": "round", "line-cap": "round" },
+          paint: {
+            "line-color": ["match", ["get", "etat"], "faite", "#1E8A4C", "encours", "#F5C22E", "arepasser", "#E0782B", "#8A96A8"],
+            "line-width": ["interpolate", ["linear"], ["zoom"], 13, 3, 17, 8],
+            "line-opacity": opacite as never,
+          },
         });
         m.addLayer({ id: "dessin-fond", type: "fill", source: "dessin", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": "#F5C22E", "fill-opacity": 0.25 } });
         m.addLayer({ id: "dessin-ligne", type: "line", source: "dessin", filter: ["==", ["geometry-type"], "LineString"], paint: { "line-color": "#F5C22E", "line-width": 3, "line-dasharray": [2, 1] } });
@@ -190,6 +221,7 @@ export default function Carte(p: Props) {
     const m = carte.current;
     if (!prete || !m) return;
     (m.getSource("zones") as GeoJSONSource | undefined)?.setData(geo.zones);
+    (m.getSource("traces") as GeoJSONSource | undefined)?.setData(geo.traces);
     if (!cadree.current) {
       const cibles = p.secteurs.filter((s) => s.contour.length >= 3 && (!p.focusEquipe || s.equipe_id === p.focusEquipe));
       const pts = (cibles.length ? cibles : p.secteurs).flatMap((s) => s.contour);
