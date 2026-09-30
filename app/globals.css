@@ -30,8 +30,8 @@ button, input, textarea, select { font: inherit; color: inherit }
 .col { flex-grow: 1; min-width: 0; display: flex; flex-direction: column }
 .banner { height: 158px; flex-shrink: 0; background: var(--navy); position: relative; overflow: hidden; display: flex; align-items: center;
   justify-content: space-between; gap: 16px; padding: 0 22px 0 32px }
-.banner .photo { position: absolute; right: 0; top: 0; width: 640px; max-width: 70%; height: 100%; object-fit: cover; object-position: center 78% }
-.banner .fondu { position: absolute; top: 0; height: 100%; width: 280px; right: min(400px, 45%); background: linear-gradient(90deg, var(--navy) 0%, rgba(20, 34, 58, 0) 100%) }
+.banner .photo { position: absolute; right: 0; top: 0; width: 780px; max-width: 75%; height: 100%; object-fit: cover; object-position: 55% 44% }
+.banner .fondu { position: absolute; top: 0; height: 100%; width: 280px; right: min(500px, 50%); background: linear-gradient(90deg, var(--navy) 0%, rgba(20, 34, 58, 0) 100%) }
 .banner .textes { position: relative; min-width: 0 }
 .banner h1 { font-size: 56px; line-height: 1; color: #fff }
 .banner h1 span { color: var(--blue-l) }
