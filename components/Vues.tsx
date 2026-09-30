@@ -6,10 +6,12 @@ import { supabase } from "@/lib/supabase";
 import { agreger } from "@/lib/agregats";
 import { eur, ilya } from "@/lib/format";
 import type { Donnees } from "@/lib/useTournee";
-import type { Config, Equipe, LngLat, Rue, Secteur } from "@/lib/types";
+import { GRIS, type Config, type Equipe, type LngLat, type Rue, type Secteur } from "@/lib/types";
+import { Chevron } from "./icones";
 import { BlocSecteur, type ActionsSecteur } from "./Secteur";
 import { DialogueAjoutRue, DialogueEquipe, DialogueRue, DialogueSecteur, ecrire } from "./Dialogues";
-import { Kpis, Progression } from "./ui";
+import { Kpis, Progression as Barre } from "./ui";
+import { libelle, pastille } from "./Carte";
 
 const Carte = dynamic(() => import("./Carte"), { ssr: false, loading: () => <div className="carte" /> });
 
@@ -74,9 +76,71 @@ function useActions(d: Donnees, admin: boolean, peutNoter: (s: Secteur) => boole
 const cadrer = (c: { lng: number; lat: number; zoom: number }) =>
   ecrire(() => supabase.from("config").update({ centre_lng: c.lng, centre_lat: c.lat, zoom: c.zoom }).eq("id", 1));
 
+// ---------------------------------------------------------------- blocs de la colonne de droite
+
+function ListeSecteurs({ d, ruesDu, selection, onSelect }: {
+  d: Donnees; ruesDu: (id: string) => Rue[]; selection: string | null; onSelect: (id: string) => void;
+}) {
+  const couleur = (s: Secteur) => d.equipes.find((e) => e.id === s.equipe_id)?.couleur ?? GRIS;
+  return (
+    <section className="carte-blanche bloc" id="secteurs">
+      <h2>Secteurs</h2>
+      {!d.secteurs.length && <p className="hint" style={{ margin: 0 }}>Aucun secteur pour l&apos;instant.</p>}
+      <ul className="liste-secteurs">
+        {d.secteurs.map((s) => {
+          const a = agreger(ruesDu(s.id));
+          const pct = a.rues ? Math.round((a.faite / a.rues) * 100) : 0;
+          const c = couleur(s);
+          return (
+            <li key={s.id}>
+              <button type="button" aria-pressed={selection === s.id} onClick={() => onSelect(s.id)}>
+                <span className="pastille" style={{ background: c, color: c === "#F5C22E" ? "var(--ink)" : "#fff" }}>{pastille(s.nom)}</span>
+                <span className="milieu">
+                  <span className="nom">{libelle(s.nom)}</span>
+                  <span className="jauge" style={{ marginTop: 0 }}><i style={{ width: `${pct}%`, background: c }} /></span>
+                </span>
+                <span className="val">{a.rues ? `${pct} %` : "—"}</span>
+                <Chevron />
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+function Progression({ a, depart }: { a: ReturnType<typeof agreger>; depart: number }) {
+  const pct = depart ? Math.min(100, Math.round((a.vendus / depart) * 100)) : a.rues ? Math.round((a.faite / a.rues) * 100) : 0;
+  const tour = 2 * Math.PI * 52;
+  return (
+    <section className="carte-blanche bloc" id="progression">
+      <h2>Progression globale</h2>
+      <div className="donut">
+        <div className="cercle">
+          <svg width="128" height="128" viewBox="0 0 128 128" aria-hidden="true">
+            <circle cx="64" cy="64" r="52" fill="none" stroke="#D7E6FA" strokeWidth="14" />
+            <circle cx="64" cy="64" r="52" fill="none" stroke="var(--done)" strokeWidth="14" strokeDasharray={`${(pct / 100) * tour} ${tour}`} transform="rotate(-90 64 64)" />
+          </svg>
+          <div className="centre"><b>{pct} %</b><span>{depart ? "vendus" : "terminé"}</span></div>
+        </div>
+        <ul className="legende">
+          <li><i style={{ background: "var(--done)" }} /><span>Vendus</span><b>{a.vendus}</b></li>
+          {depart > 0 && <li><i style={{ background: "#6FA8F2" }} /><span>Restants</span><b>{depart - a.vendus}</b></li>}
+          <li><i style={{ background: "var(--violet)" }} /><span>Rues faites</span><b>{a.faite}</b></li>
+          <li><i style={{ background: "var(--redo)" }} /><span>Commencées</span><b>{a.encours}</b></li>
+          <li><i style={{ background: "var(--danger)" }} /><span>À repasser</span><b>{a.arepasser}</b></li>
+        </ul>
+      </div>
+    </section>
+  );
+}
+
 // ---------------------------------------------------------------- vue d'ensemble (admins)
 
-export function VueEnsemble({ d, config }: { d: Donnees; config: Config }) {
+export function VueEnsemble({ d, config, dessinDemande, onDessinActif }: {
+  d: Donnees; config: Config; dessinDemande: number; onDessinActif: (actif: boolean) => void;
+}) {
   const [ouvertes, setOuvertes] = useState<Set<string>>(new Set());
   const a = useActions(d, true, () => true);
   const total = agreger(d.rues);
@@ -85,28 +149,37 @@ export function VueEnsemble({ d, config }: { d: Donnees; config: Config }) {
   const equipe = (id: string | null) => d.equipes.find((e) => e.id === id);
   const basculer = (id: string) => setOuvertes((o) => { const n = new Set(o); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const orphelins = d.secteurs.filter((s) => !equipe(s.equipe_id));
+  const choisir = (id: string) => {
+    a.setSelection(id);
+    setTimeout(() => document.getElementById("detail-secteur")?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 50);
+  };
 
   return (
     <>
-      <div className="hero">
-        <span className="num">{eur(total.somme)}</span>
-        <span className="muted">collectés sur la tournée ({eur(total.especes)} en espèces, {eur(total.cheques)} en chèques)</span>
-      </div>
       <Kpis a={total} depart={depart} />
-      <Carte config={config} equipes={d.equipes} secteurs={d.secteurs} rues={d.rues} selection={a.selection} onSelect={a.setSelection}
-        admin onDessin={a.onDessin} onCadrage={cadrer} redessin={a.redessin} onRedessinFini={() => a.setRedessin(null)} />
-      {choisi ? (
-        <div className="card" style={{ marginTop: 12 }}>
-          <BlocSecteur secteur={choisi} rues={a.ruesDu(choisi.id)} equipe={equipe(choisi.equipe_id)} ville={config.ville} montrerEquipe actions={a.actions(choisi)} />
+      <div className="zone-carte">
+        <div className="gauche">
+          <Carte config={config} equipes={d.equipes} secteurs={d.secteurs} rues={d.rues} selection={a.selection} onSelect={a.setSelection}
+            admin onDessin={a.onDessin} onCadrage={cadrer} dessinDemande={dessinDemande} onDessinActif={onDessinActif}
+            redessin={a.redessin} onRedessinFini={() => a.setRedessin(null)} />
+          {choisi ? (
+            <div className="card" id="detail-secteur">
+              <BlocSecteur secteur={choisi} rues={a.ruesDu(choisi.id)} equipe={equipe(choisi.equipe_id)} ville={config.ville} montrerEquipe actions={a.actions(choisi)} />
+            </div>
+          ) : (
+            <p className="hint" style={{ margin: 0 }}>
+              {d.secteurs.length ? "Touchez un secteur sur la carte pour voir ses rues." : "Commencez par « Dessiner un secteur » : touchez la carte pour poser ses coins."}
+            </p>
+          )}
         </div>
-      ) : d.secteurs.length ? (
-        <p className="hint">Touchez un secteur sur la carte pour voir ses rues.</p>
-      ) : (
-        <p className="hint">Commencez par « Dessiner un secteur » : touchez la carte pour poser ses coins.</p>
-      )}
+        <div className="droite">
+          <ListeSecteurs d={d} ruesDu={a.ruesDu} selection={a.selection} onSelect={choisir} />
+          <Progression a={total} depart={depart} />
+        </div>
+      </div>
 
-      <div className="bar" style={{ marginTop: 22 }}>
-        <h2 className="grow">Équipes</h2>
+      <div className="titre-section" id="equipes">
+        <h2>Équipes</h2>
         <button className="btn primary" onClick={() => a.setDialogue({ t: "equipe", equipe: null })}>Nouvelle équipe</button>
       </div>
       {!d.equipes.length && (
@@ -137,7 +210,7 @@ export function VueEnsemble({ d, config }: { d: Donnees; config: Config }) {
               {ta.arepasser > 0 && <span style={{ color: "var(--redo)" }}><strong style={{ color: "inherit" }}>{ta.arepasser}</strong> à repasser</span>}
               <span style={muette ? { color: "var(--danger)" } : undefined}>{muette ? "sans nouvelles " : ""}{ilya(ta.maj || null)}</span>
             </div>
-            <Progression a={ta} />
+            <Barre a={ta} />
             {ouverte && (
               <>
                 {secs.length ? (
@@ -176,14 +249,9 @@ export function VueEquipe({ d, config, equipeId, admin }: { d: Donnees; config: 
   if (!t) return <div className="empty"><strong>Équipe introuvable</strong>Elle a peut-être été supprimée. Demandez un nouveau lien à votre responsable.</div>;
   const secs = d.secteurs.filter((s) => s.equipe_id === t.id);
   const ta = agreger(secs.flatMap((s) => a.ruesDu(s.id)));
-  const dep = Number(t.depart) || 0;
   return (
     <>
-      <div className="hero">
-        <span className="num">{eur(ta.somme)}</span>
-        <span className="muted">collectés par {t.nom}</span>
-      </div>
-      <Kpis a={ta} depart={dep} />
+      <Kpis a={ta} depart={Number(t.depart) || 0} libelle={`collectés par ${t.nom}`} />
       <Carte config={config} equipes={d.equipes} secteurs={d.secteurs} rues={d.rues} focusEquipe={t.id} selection={a.selection}
         onSelect={(id) => {
           a.setSelection(id);
@@ -191,7 +259,7 @@ export function VueEquipe({ d, config, equipeId, admin }: { d: Donnees; config: 
         }} admin={false} />
       {secs.length ? (
         <>
-          <p className="hint" style={{ marginTop: 12 }}>Touchez une rue pour noter où vous en êtes.</p>
+          <p className="hint" style={{ margin: 0 }}>Touchez une rue pour noter où vous en êtes.</p>
           {secs.map((s) => (
             <div className="card" key={s.id} id={`secteur-${s.id}`}>
               <BlocSecteur secteur={s} rues={a.ruesDu(s.id)} equipe={t} ville={config.ville} montrerEquipe={false} actions={a.actions(s)} />
@@ -199,7 +267,7 @@ export function VueEquipe({ d, config, equipeId, admin }: { d: Donnees; config: 
           ))}
         </>
       ) : (
-        <div className="empty" style={{ marginTop: 12 }}><strong>Aucun secteur attribué</strong>Demandez à un admin de vous attribuer un secteur.</div>
+        <div className="empty"><strong>Aucun secteur attribué</strong>Demandez à un admin de vous attribuer un secteur.</div>
       )}
       {a.rendu}
     </>

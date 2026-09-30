@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import type { Agregat } from "@/lib/agregats";
+import { eur } from "@/lib/format";
+import { Document, Drapeau, Lecture, Panier, Pieces, Route } from "./icones";
 
 // ---------- toasts
 
@@ -111,43 +113,43 @@ export function Progression({ a }: { a: Agregat }) {
   );
 }
 
-export function Kpis({ a, depart }: { a: Agregat; depart: number }) {
+function Tuile({ icone, fond, couleur, valeur, libelle, pct, barre }: {
+  icone: ReactNode; fond: string; couleur: string; valeur: ReactNode; libelle: string; pct: number; barre: string;
+}) {
   return (
-    <div className="kpis">
-      <div className="kpi">
-        <b>
-          {a.vendus}
-          {depart ? ` / ${depart}` : ""}
-        </b>
-        <span>calendriers vendus</span>
-      </div>
-      {depart > 0 && (
-        <div className="kpi">
-          <b>{depart - a.vendus}</b>
-          <span>calendriers restants</span>
-        </div>
-      )}
-      <div className="kpi">
-        <b>
-          {a.faite} / {a.rues}
-        </b>
-        <span>rues faites</span>
-      </div>
-      <div className="kpi">
-        <b>{a.encours}</b>
-        <span>rues commencées</span>
-      </div>
-      <div className="kpi">
-        <b>{a.arepasser}</b>
-        <span>rues à repasser</span>
-      </div>
+    <div className="carte-blanche kpi">
+      <div className="tuile" style={{ background: fond, color: couleur }}>{icone}</div>
+      <b>{valeur}</b>
+      <span>{libelle}</span>
+      <div className="jauge"><i style={{ width: `${Math.min(100, Math.max(0, pct))}%`, background: barre }} /></div>
     </div>
   );
 }
 
-export const Epingle = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z" />
-    <circle cx="12" cy="9.5" r="2.5" />
-  </svg>
-);
+export function Kpis({ a, depart, libelle = "collectés sur la tournée" }: { a: Agregat; depart: number; libelle?: string }) {
+  const pctRues = (n: number) => (a.rues ? (n / a.rues) * 100 : 0);
+  return (
+    <div className="kpis">
+      <div className="carte-blanche kpi-total">
+        <Pieces />
+        <div>
+          <b>{eur(a.somme)}</b>
+          <span>{libelle}</span>
+          <small>{eur(a.especes)} en espèces, {eur(a.cheques)} en chèques</small>
+        </div>
+      </div>
+      <Tuile icone={<Panier />} fond="#DDF3E4" couleur="#1E8A4C" barre="var(--done)" libelle="calendriers vendus"
+        valeur={<>{a.vendus}{depart ? ` / ${depart}` : ""}</>} pct={depart ? (a.vendus / depart) * 100 : 0} />
+      <Tuile icone={<Document />} fond="#DCE9FC" couleur="#1D5FD1" barre="#6FA8F2" libelle="calendriers restants"
+        valeur={depart ? depart - a.vendus : "—"} pct={depart ? ((depart - a.vendus) / depart) * 100 : 0} />
+      <Tuile icone={<Route />} fond="#E8E3FC" couleur="var(--violet)" barre="var(--violet)" libelle="rues faites"
+        valeur={`${a.faite} / ${a.rues}`} pct={pctRues(a.faite)} />
+      <Tuile icone={<Lecture />} fond="#FDE8D6" couleur="#C45A12" barre="var(--redo)" libelle="rues commencées"
+        valeur={a.encours} pct={pctRues(a.encours)} />
+      <Tuile icone={<Drapeau />} fond="#FCDEDE" couleur="var(--danger)" barre="var(--danger)" libelle="rues à repasser"
+        valeur={a.arepasser} pct={pctRues(a.arepasser)} />
+    </div>
+  );
+}
+
+export { Epingle } from "./icones";

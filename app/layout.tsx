@@ -16,17 +16,14 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#E9EDF1" },
-    { media: "(prefers-color-scheme: dark)", color: "#101826" },
-  ],
+  themeColor: "#14223A",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fr" className={`${barlow.variable} ${barlowCondensed.variable}`}>
       <body>
-        <div className="wrap">{children}</div>
+        {children}
         <Toasts />
       </body>
     </html>

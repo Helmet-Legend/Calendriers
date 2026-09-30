@@ -4,10 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useHorloge, useRole, useTournee } from "@/lib/useTournee";
-import { Entete } from "@/components/Page";
+import { Cadre } from "@/components/Page";
 import { VueEnsemble, VueEquipe } from "@/components/Vues";
 import { DialogueReglages } from "@/components/Dialogues";
-import { toast } from "@/components/ui";
+import { ChevronBas, Crayon, Engrenage, Grille, Groupe, Sortie } from "@/components/icones";
+import { Modal, toast } from "@/components/ui";
 
 function Connexion() {
   const [email, setEmail] = useState("");
@@ -19,8 +20,7 @@ function Connexion() {
     else setEnvoye(true);
   };
   return (
-    <>
-      <Entete />
+    <Cadre etroit>
       <div className="card">
         <h2>Connexion des responsables</h2>
         {envoye ? (
@@ -33,8 +33,24 @@ function Connexion() {
           </form>
         )}
       </div>
-      <p className="hint">Vous faites partie d&apos;une équipe ? Ouvrez simplement le lien que votre responsable vous a envoyé.</p>
-    </>
+      <p className="hint" style={{ margin: 0 }}>Vous faites partie d&apos;une équipe ? Ouvrez simplement le lien que votre responsable vous a envoyé.</p>
+    </Cadre>
+  );
+}
+
+function DialogueAide({ onClose }: { onClose: () => void }) {
+  return (
+    <Modal onClose={onClose} onSubmit={() => true}>
+      <h2>Aide</h2>
+      <ol style={{ paddingLeft: 20, margin: "12px 0 0", display: "flex", flexDirection: "column", gap: 8 }}>
+        <li><strong>Réglages</strong> : indiquez le titre et la commune, la carte se centre dessus.</li>
+        <li><strong>Nouvelle équipe</strong> : nom, membres, calendriers au départ et couleur.</li>
+        <li><strong>Dessiner un secteur</strong> : touchez la carte pour poser ses coins, puis « Terminer ». Les rues de la zone sont proposées automatiquement.</li>
+        <li><strong>Lien d&apos;équipe</strong> : dans l&apos;équipe, « Modifier l&apos;équipe et son lien » → « Partager ». Chaque téléphone l&apos;ouvre une fois.</li>
+        <li>Les équipes touchent une rue pour noter l&apos;avancement, les ventes et l&apos;argent encaissé. Tout se met à jour ici en direct.</li>
+      </ol>
+      <div className="row"><button type="submit" className="btn primary">Compris</button></div>
+    </Modal>
   );
 }
 
@@ -45,6 +61,9 @@ export default function Accueil() {
   const d = useTournee(admin);
   const [onglet, setOnglet] = useState<"tout" | string>("tout");
   const [reglages, setReglages] = useState(false);
+  const [aide, setAide] = useState(false);
+  const [dessinDemande, setDessinDemande] = useState(0);
+  const [dessinActif, setDessinActif] = useState(false);
   const revendique = useRef(false);
   useHorloge();
 
@@ -60,36 +79,60 @@ export default function Accueil() {
     supabase.rpc("revendiquer_admin").then(({ data }) => data && rafraichir());
   }, [role, anonyme, rafraichir]);
 
-  if (role.chargement || (anonyme && role.equipeId)) return <Entete />;
+  if (role.chargement || (anonyme && role.equipeId)) return <Cadre />;
   if (!role.session || anonyme) return <Connexion />;
-  const deconnexion = <button className="btn small" onClick={() => supabase.auth.signOut()}>Déconnexion</button>;
+  const deconnexion = (
+    <button type="button" className="btn-verre" onClick={() => supabase.auth.signOut()}>
+      <Sortie /><span className="libelle">Déconnexion</span>
+    </button>
+  );
   if (!role.admin)
     return (
-      <>
-        <Entete droite={deconnexion} />
+      <Cadre actions={deconnexion} etroit>
         <div className="empty">
           <strong>Ce compte n&apos;est pas responsable</strong>
           {role.session.user.email} n&apos;est pas dans la liste des admins. Demandez à un admin de vous ajouter depuis les réglages.
         </div>
-      </>
+      </Cadre>
     );
 
-  if (!d.pret || !d.config) return <Entete d={d} droite={deconnexion} />;
-  return (
+  const actions = (
     <>
-      <Entete d={d} droite={<div className="bar" style={{ margin: 0 }}>
-        <button className="btn small" onClick={() => setReglages(true)}>Réglages</button>{deconnexion}
-      </div>} />
-      <div className="tabs" role="tablist">
-        <button role="tab" aria-selected={onglet === "tout"} onClick={() => setOnglet("tout")}>Vue d&apos;ensemble</button>
-        <select aria-label="Voir comme une équipe" value={onglet === "tout" ? "" : onglet} onChange={(e) => setOnglet(e.target.value || "tout")}
-          style={{ flex: 1, border: 0, background: onglet === "tout" ? "none" : "var(--ink)", color: onglet === "tout" ? "var(--muted)" : "var(--bg)", fontWeight: 600 }}>
-          <option value="">Vue d&apos;une équipe…</option>
-          {d.equipes.map((e) => <option key={e.id} value={e.id}>{e.nom}</option>)}
-        </select>
-      </div>
-      {onglet === "tout" ? <VueEnsemble d={d} config={d.config} /> : <VueEquipe key={onglet} d={d} config={d.config} equipeId={onglet} admin />}
-      {reglages && <DialogueReglages config={d.config} moi={role.session.user.email ?? ""} onClose={() => setReglages(false)} />}
+      <button type="button" className="btn-verre" onClick={() => setReglages(true)}><Engrenage /><span className="libelle">Réglages</span></button>
+      {deconnexion}
     </>
+  );
+  if (!d.pret || !d.config) return <Cadre d={d} actions={actions} menu onAide={() => setAide(true)} />;
+  const equipeVue = onglet === "tout" ? null : d.equipes.find((e) => e.id === onglet);
+
+  return (
+    <Cadre d={d} actions={actions} menu onAide={() => setAide(true)}>
+      <div className="ligne-onglets">
+        <div className="onglets" role="tablist" aria-label="Vues">
+          <button type="button" role="tab" aria-selected={onglet === "tout"} onClick={() => setOnglet("tout")}>
+            <Grille />Vue d&apos;ensemble
+          </button>
+          <div className={`choix ${equipeVue ? "actif" : ""}`}>
+            <Groupe size={28} />
+            <span>{equipeVue ? equipeVue.nom : "Vue d'une équipe…"}</span>
+            <ChevronBas />
+            <select aria-label="Voir comme une équipe" value={equipeVue ? onglet : ""} onChange={(e) => setOnglet(e.target.value || "tout")}>
+              <option value="">Vue d&apos;ensemble</option>
+              {d.equipes.map((e) => <option key={e.id} value={e.id}>{e.nom}</option>)}
+            </select>
+          </div>
+        </div>
+        <button type="button" className="btn-jaune" disabled={dessinActif} onClick={() => { setOnglet("tout"); setDessinDemande((n) => n + 1); }}>
+          <Crayon size={28} />Dessiner un secteur
+        </button>
+      </div>
+      {equipeVue ? (
+        <VueEquipe key={onglet} d={d} config={d.config} equipeId={onglet} admin />
+      ) : (
+        <VueEnsemble d={d} config={d.config} dessinDemande={dessinDemande} onDessinActif={setDessinActif} />
+      )}
+      {reglages && <DialogueReglages config={d.config} moi={role.session.user.email ?? ""} onClose={() => setReglages(false)} />}
+      {aide && <DialogueAide onClose={() => setAide(false)} />}
+    </Cadre>
   );
 }

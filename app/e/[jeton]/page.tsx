@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { Entete } from "@/components/Page";
+import { Cadre } from "@/components/Page";
 
 type Etat = "attente" | "admin" | "invalide" | "erreur";
 
@@ -31,8 +31,7 @@ export default function Rejoindre() {
   }, [jeton, router]);
 
   return (
-    <>
-      <Entete />
+    <Cadre etroit>
       {etat === "attente" && <p className="hint">Connexion à votre équipe…</p>}
       {etat === "admin" && (
         <div className="empty">
@@ -46,6 +45,6 @@ export default function Rejoindre() {
       {etat === "erreur" && (
         <div className="empty"><strong>Connexion impossible</strong>Vérifiez votre connexion internet puis rouvrez le lien.</div>
       )}
-    </>
+    </Cadre>
   );
 }
