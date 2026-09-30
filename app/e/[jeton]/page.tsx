@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Cadre } from "@/components/Page";
 import { CLE_JETON } from "@/components/Installation";
+import { retenirProfil } from "@/components/Accueil";
 
 type Etat = "attente" | "admin" | "invalide" | "erreur";
 
@@ -28,6 +29,7 @@ export default function Rejoindre() {
       if (error) return setEtat("erreur");
       if (!data) return setEtat("invalide");
       try { localStorage.setItem(CLE_JETON, jeton); } catch { /* stockage indisponible */ }
+      retenirProfil("equipe");
       router.replace("/equipe");
     })();
   }, [jeton, router]);

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useHorloge, useRole, useTournee } from "@/lib/useTournee";
 import { Cadre } from "@/components/Page";
 import { VueEquipe } from "@/components/Vues";
+import { CollerLien } from "@/components/Accueil";
 
 export default function MaTournee() {
   const router = useRouter();
@@ -24,6 +25,7 @@ export default function MaTournee() {
         <div className="empty">
           <strong>Téléphone non rattaché à une équipe</strong>
           Ouvrez le lien d&apos;accès que votre responsable vous a envoyé (SMS, WhatsApp…).
+          <div style={{ marginTop: 12 }}><CollerLien /></div>
         </div>
       </Cadre>
     );

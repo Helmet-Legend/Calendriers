@@ -307,6 +307,56 @@ input, textarea, select { background: var(--surface); border: 1px solid var(--li
 .toast[style*="display: none"] { display: none !important }
 .toast-action { border: 0; background: var(--signal); color: var(--ink); font-weight: 700; border-radius: 8px; padding: 8px 14px; cursor: pointer; flex-shrink: 0; min-height: 40px }
 
+/* ---------- page d'accueil */
+.accueil { position: relative; min-height: 100vh; background: var(--navy); overflow: hidden }
+.accueil-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 55% 45% }
+.accueil-voile { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(20, 34, 58, .94) 0%, rgba(20, 34, 58, .8) 45%, rgba(20, 34, 58, .35) 100%) }
+.accueil-grille { position: relative; min-height: 100vh; max-width: 1320px; margin: 0 auto; padding: 48px 56px; display: grid;
+  grid-template-columns: minmax(0, 1fr) 480px; gap: 56px; align-items: center }
+.accueil-texte { color: #fff; display: flex; flex-direction: column; gap: 20px }
+.accueil-logo { width: 64px; height: 64px; border-radius: 18px }
+.accueil-texte h1 { font-size: 84px; line-height: .95; color: #fff }
+.accueil-texte h1 span { color: var(--blue-l) }
+.accueil-texte p { margin: 0; font-size: 22px; line-height: 1.45; color: #D6DEEA; max-width: 560px }
+.accueil-texte ul { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 12px; font-size: 18px }
+.accueil-texte li { display: flex; align-items: center; gap: 12px }
+.accueil-texte li i { width: 10px; height: 10px; border-radius: 50% }
+.accueil-cartes { display: flex; flex-direction: column; gap: 18px }
+.accueil-carte { background: var(--surface); border-radius: 20px; padding: 26px; display: flex; flex-direction: column; gap: 12px;
+  box-shadow: 0 12px 40px rgba(10, 18, 30, .25) }
+.accueil-tete { display: flex; align-items: center; gap: 12px }
+.accueil-tete h2 { font-size: 28px; line-height: 1.1 }
+.accueil-icone { width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; flex-shrink: 0 }
+.accueil-form { display: flex; flex-direction: column; gap: 8px }
+.accueil-form label { margin: 4px 0 0 }
+.accueil-form input { min-height: 52px; font-size: 16px }
+.accueil-bouton { min-height: 54px; justify-content: center; font-size: 17px; border-radius: 14px }
+.accueil-ok { margin: 0; background: #EEF6F1; color: #1E6B3E; border-radius: 12px; padding: 12px 14px; line-height: 1.45 }
+.accueil-sms { display: flex; gap: 10px; align-items: flex-start; background: #F2F5F8; border-radius: 12px; padding: 12px 14px; line-height: 1.4; color: var(--ink) }
+.accueil-sms svg { color: var(--muted); flex-shrink: 0; margin-top: 2px }
+.accueil-etapes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px }
+.accueil-etapes li { display: flex; gap: 10px; align-items: flex-start; line-height: 1.4 }
+.accueil-etapes li .num { width: 26px; height: 26px; border-radius: 50%; background: #1E8A4C; color: #fff; font-weight: 700; font-size: 14px;
+  display: grid; place-items: center; flex-shrink: 0 }
+.accueil-carte .btn.lien { align-self: flex-start; text-align: left; font-size: .92rem }
+@media (max-width: 1000px) {
+  .accueil { background: var(--bg); min-height: 0 }
+  .accueil-photo { height: 300px; object-position: 50% 45% }
+  .accueil-voile { height: 300px; background: linear-gradient(180deg, rgba(20, 34, 58, .35) 0%, rgba(20, 34, 58, .92) 100%) }
+  .accueil-grille { display: block; min-height: 0; padding: 0 }
+  .accueil-texte { height: 300px; justify-content: flex-end; gap: 10px; padding: 20px }
+  .accueil-texte h1 { font-size: 44px }
+  .accueil-texte p { font-size: 16px }
+  .accueil-texte ul { display: none }
+  .accueil-logo { width: 52px; height: 52px; border-radius: 15px }
+  .accueil-cartes { padding: 16px 14px 28px; gap: 14px }
+  /* sur téléphone : les équipes d'abord, sauf si ce téléphone sert à un responsable */
+  .accueil-cartes { flex-direction: column-reverse }
+  .accueil-cartes.responsable-d-abord { flex-direction: column }
+  .accueil-carte { padding: 20px; box-shadow: 0 4px 16px rgba(10, 18, 30, .08) }
+  .accueil-tete h2 { font-size: 24px }
+}
+
 /* ---------- écrans moyens et téléphones */
 @media (max-width: 1280px) {
   .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)) }

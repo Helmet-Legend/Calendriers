@@ -8,35 +8,8 @@ import { Cadre } from "@/components/Page";
 import { VueEnsemble, VueEquipe } from "@/components/Vues";
 import { DialogueReglages } from "@/components/Dialogues";
 import { ChevronBas, Crayon, Engrenage, Grille, Groupe, Sortie } from "@/components/icones";
-import { Modal, toast } from "@/components/ui";
-
-function Connexion() {
-  const [email, setEmail] = useState("");
-  const [envoye, setEnvoye] = useState(false);
-  const envoyer = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const { error } = await supabase.auth.signInWithOtp({ email: email.trim(), options: { emailRedirectTo: location.origin } });
-    if (error) toast(error.status === 429 ? "Trop de demandes, réessayez dans quelques minutes" : "Envoi impossible, vérifiez l'adresse");
-    else setEnvoye(true);
-  };
-  return (
-    <Cadre etroit>
-      <div className="card">
-        <h2>Connexion des responsables</h2>
-        {envoye ? (
-          <p>Un lien de connexion a été envoyé à <strong>{email}</strong>. Ouvrez-le sur cet appareil.</p>
-        ) : (
-          <form onSubmit={envoyer}>
-            <label htmlFor="f-email">Adresse e-mail</label>
-            <input id="f-email" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-            <div className="row"><button type="submit" className="btn primary">Recevoir un lien de connexion</button></div>
-          </form>
-        )}
-      </div>
-      <p className="hint" style={{ margin: 0 }}>Vous faites partie d&apos;une équipe ? Ouvrez simplement le lien que votre responsable vous a envoyé.</p>
-    </Cadre>
-  );
-}
+import { Modal } from "@/components/ui";
+import { Accueil as PageAccueil, retenirProfil } from "@/components/Accueil";
 
 function DialogueAide({ onClose }: { onClose: () => void }) {
   return (
@@ -72,6 +45,9 @@ export default function Accueil() {
     if (anonyme && !role.chargement && role.equipeId) router.replace("/equipe");
   }, [anonyme, role, router]);
 
+  // Ce téléphone sert à un responsable : sa carte passera en premier à l'accueil.
+  useEffect(() => { if (admin) retenirProfil("responsable"); }, [admin]);
+
   // Tout premier compte connecté : il devient admin si aucun n'existe encore.
   useEffect(() => {
     if (role.chargement || !role.session || anonyme || role.admin || revendique.current) return;
@@ -80,7 +56,7 @@ export default function Accueil() {
   }, [role, anonyme, rafraichir]);
 
   if (role.chargement || (anonyme && role.equipeId)) return <Cadre />;
-  if (!role.session || anonyme) return <Connexion />;
+  if (!role.session || anonyme) return <PageAccueil />;
   const deconnexion = (
     <button type="button" className="btn-verre" onClick={() => {
       try { for (const k of Object.keys(localStorage)) if (k.startsWith("tournee-copie") || k.startsWith("tournee-role-")) localStorage.removeItem(k); } catch { /* rien */ }
