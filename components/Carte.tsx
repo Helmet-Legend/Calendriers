@@ -353,20 +353,21 @@ export default function Carte(p: Props) {
 
   return (
     <>
-      {p.admin && !dessin && p.onCadrage && (
-        <button type="button" className="chip-btn" onClick={() => {
-          const m = carte.current;
-          if (m) p.onCadrage!({ lng: m.getCenter().lng, lat: m.getCenter().lat, zoom: m.getZoom() });
-        }}>
-          <Etoile size={22} />Garder ce cadrage par défaut
-        </button>
-      )}
       <div className={`carte ${dessin ? "dessin" : ""}`} id="carte">
         <div className="mapbox" ref={conteneur} />
         <form className="recherche" role="search" onSubmit={chercher}>
           <Loupe />
           <input type="search" placeholder="Rechercher une adresse…" aria-label="Rechercher une adresse" value={adresse} onChange={(e) => setAdresse(e.target.value)} />
         </form>
+        {p.admin && !dessin && p.onCadrage && (
+          <button type="button" className="bouton-carte cadrage" title="Garder ce cadrage par défaut"
+            onClick={() => {
+              const m = carte.current;
+              if (m) p.onCadrage!({ lng: m.getCenter().lng, lat: m.getCenter().lat, zoom: m.getZoom() });
+            }}>
+            <Etoile size={18} /><span>Cadrage par défaut</span>
+          </button>
+        )}
         <ul className="legende-carte" aria-label="Légende des rues">
           <li><i className="l-faite" />Faite</li>
           <li><i className="l-encours" />Commencée</li>

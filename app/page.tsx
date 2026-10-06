@@ -7,7 +7,7 @@ import { useHorloge, useRole, useTournee } from "@/lib/useTournee";
 import { Cadre } from "@/components/Page";
 import { VueEnsemble, VueEquipe } from "@/components/Vues";
 import { DialogueReglages } from "@/components/Dialogues";
-import { ChevronBas, Crayon, Engrenage, Grille, Groupe, Sortie } from "@/components/icones";
+import { ChevronBas, Engrenage, Grille, Groupe, Sortie } from "@/components/icones";
 import { Modal } from "@/components/ui";
 import { Accueil as PageAccueil, retenirProfil } from "@/components/Accueil";
 
@@ -101,9 +101,6 @@ export default function Accueil() {
             </select>
           </div>
         </div>
-        <button type="button" className="btn-jaune" disabled={dessinActif} onClick={() => { setOnglet("tout"); setDessinDemande((n) => n + 1); }}>
-          <Crayon size={28} />Dessiner un secteur
-        </button>
       </div>
       {equipeVue ? (
         <VueEquipe key={onglet} d={d} config={d.config} equipeId={onglet} admin />

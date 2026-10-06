@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { prixMoyen, type Agregat, type Argent } from "@/lib/agregats";
 import { eur } from "@/lib/format";
-import { Document, Drapeau, Lecture, Panier, Pieces, Route } from "./icones";
+import { Panier, Pieces, Route } from "./icones";
 
 // ---------- toasts
 
@@ -121,46 +121,50 @@ export function Progression({ a }: { a: Agregat }) {
   );
 }
 
-function Tuile({ icone, fond, couleur, valeur, libelle, pct, barre }: {
-  icone: ReactNode; fond: string; couleur: string; valeur: ReactNode; libelle: string; pct: number; barre: string;
+function Tuile({ icone, fond, couleur, valeur, libelle, detail, pct, barre }: {
+  icone: ReactNode; fond: string; couleur: string; valeur: ReactNode; libelle: string; detail?: ReactNode; pct: number; barre: string;
 }) {
   return (
     <div className="carte-blanche kpi">
-      <div className="tuile" style={{ background: fond, color: couleur }}>{icone}</div>
-      <b>{valeur}</b>
-      <span>{libelle}</span>
+      <div className="kpi-haut">
+        <div className="tuile" style={{ background: fond, color: couleur }}>{icone}</div>
+        <div>
+          <b>{valeur}</b>
+          <span>{libelle}</span>
+        </div>
+      </div>
       <div className="jauge"><i style={{ width: `${Math.min(100, Math.max(0, pct))}%`, background: barre }} /></div>
+      {detail && <small className="kpi-detail">{detail}</small>}
     </div>
   );
 }
 
+/** Trois chiffres clés : argent, calendriers, rues. Les détails sont en petit dans chaque tuile. */
 export function Kpis({ a, depart, argent, libelle = "collectés sur la tournée" }: {
   a: Agregat; depart: number; argent?: Argent; libelle?: string;
 }) {
-  const pctRues = (n: number) => (a.rues ? (n / a.rues) * 100 : 0);
   const m = argent ?? { ...a, finale: false };
   const prix = prixMoyen(m.somme, a.vendus);
+  const detailsRues = [a.encours ? `${a.encours} commencée${a.encours > 1 ? "s" : ""}` : "", a.arepasser ? `${a.arepasser} à repasser` : ""].filter(Boolean).join(" · ");
   return (
     <div className="kpis">
       <div className="carte-blanche kpi-total">
         <Pieces />
         <div>
           <b>{eur(m.somme)}</b>
-          <span>{libelle}{m.finale ? " (somme finale déclarée)" : ""}</span>
-          <small>{eur(m.especes)} en espèces, {eur(m.cheques)} en chèques</small>
-          {prix !== null && <small><strong style={{ fontStyle: "normal" }}>{eur(prix)}</strong> en moyenne par calendrier</small>}
+          <span>{libelle}{m.finale ? " (somme finale)" : ""}</span>
+          <small>
+            {eur(m.especes)} espèces · {eur(m.cheques)} chèques
+            {prix !== null && <> · <strong style={{ fontStyle: "normal" }}>{eur(prix)}</strong> / calendrier</>}
+          </small>
         </div>
       </div>
       <Tuile icone={<Panier />} fond="#DDF3E4" couleur="#1E8A4C" barre="var(--done)" libelle="calendriers vendus"
-        valeur={<>{a.vendus}{depart ? ` / ${depart}` : ""}</>} pct={depart ? (a.vendus / depart) * 100 : 0} />
-      <Tuile icone={<Document />} fond="#DCE9FC" couleur="#1D5FD1" barre="#6FA8F2" libelle="calendriers restants"
-        valeur={depart ? depart - a.vendus : "—"} pct={depart ? ((depart - a.vendus) / depart) * 100 : 0} />
+        valeur={<>{a.vendus}{depart ? <span className="sur"> / {depart}</span> : null}</>} pct={depart ? (a.vendus / depart) * 100 : 0}
+        detail={depart ? `${Math.max(0, depart - a.vendus)} restants` : "nombre au départ non renseigné"} />
       <Tuile icone={<Route />} fond="#E8E3FC" couleur="var(--violet)" barre="var(--violet)" libelle="rues faites"
-        valeur={`${a.faite} / ${a.rues}`} pct={pctRues(a.faite)} />
-      <Tuile icone={<Lecture />} fond="#FFF4D6" couleur="#8A5A00" barre="var(--signal)" libelle="rues commencées"
-        valeur={a.encours} pct={pctRues(a.encours)} />
-      <Tuile icone={<Drapeau />} fond="#FBE0EC" couleur="var(--repasser)" barre="var(--repasser)" libelle="rues à repasser"
-        valeur={a.arepasser} pct={pctRues(a.arepasser)} />
+        valeur={<>{a.faite}<span className="sur"> / {a.rues}</span></>} pct={a.rues ? (a.faite / a.rues) * 100 : 0}
+        detail={detailsRues || (a.rues ? "aucune en cours" : "aucune rue pour l'instant")} />
     </div>
   );
 }

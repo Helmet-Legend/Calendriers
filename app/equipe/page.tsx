@@ -31,7 +31,11 @@ export default function MaTournee() {
     );
   if (!d.pret || !d.config) return <Cadre d={d} />;
   return (
-    <Cadre d={d}>
+    <Cadre d={d} sousTitre={(() => {
+      const t = d.equipes.find((e) => e.id === equipeId);
+      const secs = d.secteurs.filter((s) => s.equipe_id === equipeId).map((s) => (s.nom.length <= 2 ? `Secteur ${s.nom}` : s.nom));
+      return t ? [t.nom, ...secs].join(" · ") : undefined;
+    })()}>
       <VueEquipe d={d} config={d.config} equipeId={equipeId} admin={false} />
     </Cadre>
   );

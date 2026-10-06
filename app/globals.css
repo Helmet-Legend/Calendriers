@@ -74,15 +74,19 @@ a.btn.primary, a.btn.vert { color: inherit }
 .onglets .choix span { flex-grow: 1; font-size: 20px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
 
 /* ---------- indicateurs */
-.kpis { display: grid; grid-template-columns: minmax(300px, 1.6fr) repeat(5, minmax(0, 1fr)); gap: 12px }
+.kpis { display: grid; grid-template-columns: minmax(320px, 1.4fr) repeat(2, minmax(0, 1fr)); gap: 12px }
 .carte-blanche { background: var(--surface); border: 1px solid var(--line); border-radius: 16px }
 .kpi-total { padding: 18px; display: flex; gap: 16px; align-items: center }
 .kpi-total b { display: block; font-family: var(--font-barlow-condensed), sans-serif; font-size: 58px; line-height: 1 }
 .kpi-total span { display: block; font-size: 17px; color: #3E4C63 }
 .kpi-total small { display: block; font-size: 14px; color: var(--muted); font-style: italic }
-.kpi { padding: 16px; display: flex; flex-direction: column; gap: 6px; min-width: 0 }
+.kpi { padding: 16px 18px; display: flex; flex-direction: column; justify-content: center; gap: 8px; min-width: 0 }
+.kpi-haut { display: flex; align-items: center; gap: 14px }
+.kpi-haut > div:last-child { display: flex; flex-direction: column }
+.kpi .sur { font-size: .6em; color: var(--muted); font-weight: 600 }
+.kpi-detail { font-size: .85rem; color: var(--muted) }
 .kpi .tuile { width: 46px; height: 46px; border-radius: 12px; display: grid; place-items: center }
-.kpi b { font-family: var(--font-barlow-condensed), sans-serif; font-size: 30px; line-height: 1.1; margin-top: 6px }
+.kpi b { font-family: var(--font-barlow-condensed), sans-serif; font-size: 36px; line-height: 1 }
 .kpi span { font-size: 15px; color: var(--muted) }
 .jauge { height: 8px; border-radius: 4px; background: var(--track); overflow: hidden; margin-top: 6px }
 .jauge i { display: block; height: 100% }
@@ -101,6 +105,10 @@ a.btn.primary, a.btn.vert { color: inherit }
 .recherche { position: absolute; left: 16px; top: 16px; z-index: 2; width: min(330px, calc(100% - 90px)); height: 48px; background: #fff; border-radius: 12px;
   box-shadow: 0 2px 8px rgba(20, 34, 58, .15); display: flex; align-items: center; gap: 10px; padding: 0 14px; color: #3E4C63 }
 .recherche input { border: 0; outline: 0; flex-grow: 1; min-width: 0; font-size: 16px; background: transparent; color: var(--ink) }
+.bouton-carte { position: absolute; z-index: 2; height: 36px; padding: 0 12px; border: 0; border-radius: 10px; background: rgba(255, 255, 255, .95);
+  box-shadow: 0 2px 8px rgba(20, 34, 58, .15); display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 13px; color: var(--ink); cursor: pointer }
+.bouton-carte.cadrage { left: 16px; top: 74px }
+.bouton-carte.cadrage svg { color: #F2A91E }
 .vue-sat { position: absolute; left: 16px; bottom: 30px; z-index: 2; width: 82px; height: 82px; border-radius: 12px; border: 3px solid #fff;
   box-shadow: 0 2px 8px rgba(20, 34, 58, .25); background: #3E5A4A center/cover; display: flex; align-items: flex-end; justify-content: center;
   padding: 0 0 4px; color: #fff; font-size: 12px; font-weight: 600; cursor: pointer; text-shadow: 0 1px 2px rgba(0, 0, 0, .6) }
@@ -233,7 +241,7 @@ div.rue-corps { cursor: default }
 .faites > summary, .depart-menu > summary { cursor: pointer; font-weight: 600; color: var(--muted); padding: 8px 2px; list-style: none }
 .faites > summary::before, .depart-menu > summary::before { content: "▸ "; }
 .faites[open] > summary::before, .depart-menu[open] > summary::before { content: "▾ "; }
-.depart-menu { flex: 1 1 220px; min-width: 0 }
+.depart-menu { margin-top: 6px }
 .depart-menu > summary { font-size: .9rem; padding: 6px 2px }
 .depart-options { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px }
 .depart-options select { flex: 1 1 200px; min-width: 0; padding: 7px 8px }
@@ -358,8 +366,8 @@ input, textarea, select { background: var(--surface); border: 1px solid var(--li
 }
 
 /* ---------- écrans moyens et téléphones */
-@media (max-width: 1280px) {
-  .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)) }
+@media (max-width: 1100px) {
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)) }
   .kpis .kpi-total { grid-column: 1 / -1 }
 }
 @media (max-width: 1100px) {

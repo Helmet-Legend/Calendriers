@@ -78,13 +78,15 @@ function ListeRues({ rues, onRue, onFaite, numeros }: {
 }
 
 export function BlocSecteur({
-  secteur, rues, equipe, montrerEquipe, actions,
+  secteur, rues, equipe, montrerEquipe, compact, actions,
 }: {
   secteur: Secteur;
   rues: Rue[];
   equipe: Equipe | undefined;
   ville?: string;
   montrerEquipe: boolean;
+  /** Masque les chiffres du secteur quand un résumé les affiche déjà. */
+  compact?: boolean;
   actions: ActionsSecteur;
 }) {
   const a = agreger(rues);
@@ -100,7 +102,7 @@ export function BlocSecteur({
   const numeros = parcours ? new Map(parcours.etapes.map((e) => [e.rue.id, e.n])) : undefined;
   const departRue = reglage.depart && "rue" in reglage.depart ? reglage.depart.rue : "";
   const libelleDepart = reglage.depart && "point" in reglage.depart ? "depuis votre position"
-    : departRue ? "depuis " + (rues.find((r) => r.id === departRue)?.nom ?? "la rue choisie") : "automatique";
+    : departRue ? (rues.find((r) => r.id === departRue)?.nom ?? "rue choisie") : "automatique";
 
   const partirDIci = () => {
     if (!("geolocation" in navigator)) return toast("Ce téléphone ne donne pas sa position");
@@ -128,37 +130,43 @@ export function BlocSecteur({
         </h3>
         <span className="pct-secteur">{a.rues ? `${av.pct} %` : ""}</span>
       </div>
-      <div className="line">
-        {montrerEquipe && <span>Équipe : <strong>{equipe ? equipe.nom : "non attribuée"}</strong></span>}
-        <span><strong>{a.faite}/{a.rues}</strong> rues{av.metresTotal ? ` · ${distance(av.metresFaits)} sur ${distance(av.metresTotal)}` : ""}</span>
-        <span><strong>{a.vendus}</strong> cal.</span>
-        <span><strong>{eur(a.somme)}</strong></span>
-      </div>
-      <Progression a={a} />
-      {traces && aFaire.length > 1 && (
-        <div className="barre-parcours">
-          <div className="seg-mini" role="group" aria-label="Ordre des rues">
-            <button type="button" aria-pressed={enParcours} onClick={() => regler(secteur.id, { mode: "parcours" })}>Ordre de passage</button>
-            <button type="button" aria-pressed={!enParcours} onClick={() => regler(secteur.id, { mode: "alpha" })}>Liste</button>
+      {!compact && (
+        <>
+          <div className="line">
+            {montrerEquipe && <span>Équipe : <strong>{equipe ? equipe.nom : "non attribuée"}</strong></span>}
+            <span><strong>{a.faite}/{a.rues}</strong> rues{av.metresTotal ? ` · ${distance(av.metresFaits)} sur ${distance(av.metresTotal)}` : ""}</span>
+            <span><strong>{a.vendus}</strong> cal.</span>
+            <span><strong>{eur(a.somme)}</strong></span>
           </div>
-          {enParcours && (
-            <details className="depart-menu">
-              <summary>Départ : {libelleDepart}</summary>
-              <div className="depart-options">
+          <Progression a={a} />
+        </>
+      )}
+      {traces && aFaire.length > 1 && (
+        <details className="depart-menu">
+          <summary>
+            {enParcours ? <>Ordre de passage · départ {libelleDepart}</> : "Liste dans l'ordre de saisie"}
+          </summary>
+          <div className="depart-options">
+            <div className="seg-mini" role="group" aria-label="Ordre des rues">
+              <button type="button" aria-pressed={enParcours} onClick={() => regler(secteur.id, { mode: "parcours" })}>Ordre de passage</button>
+              <button type="button" aria-pressed={!enParcours} onClick={() => regler(secteur.id, { mode: "alpha" })}>Ordre de saisie</button>
+            </div>
+            {enParcours && (
+              <>
                 <button type="button" className="btn small" onClick={partirDIci} disabled={gps}>
                   {gps ? "Localisation…" : "Partir d'où je suis"}
                 </button>
                 <select aria-label="Commencer par la rue" value={departRue}
                   onChange={(e) => regler(secteur.id, { depart: e.target.value ? { rue: e.target.value } : null })}>
-                  <option value="">Automatique (là où on s&apos;est arrêté)</option>
+                  <option value="">Départ automatique (là où on s&apos;est arrêté)</option>
                   {aFaire.filter((r) => r.trace?.length).sort((x, y) => x.nom.localeCompare(y.nom, "fr")).map((r) => (
-                    <option key={r.id} value={r.id}>{r.nom}</option>
+                    <option key={r.id} value={r.id}>Commencer par : {r.nom}</option>
                   ))}
                 </select>
-              </div>
-            </details>
-          )}
-        </div>
+              </>
+            )}
+          </div>
+        </details>
       )}
       {!rues.length && <p className="hint">Aucune rue pour ce secteur.</p>}
       {rues.length > 0 && !aFaire.length && <p className="bravo">Toutes les rues de ce secteur sont faites. Bravo !</p>}

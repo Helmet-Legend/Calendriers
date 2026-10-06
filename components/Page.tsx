@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import type { Donnees } from "@/lib/useTournee";
-import { Aide, Barres, Calendrier, Groupe, Repere } from "./icones";
+import { Aide, Calendrier, Groupe, Repere } from "./icones";
 import { Installation } from "./Installation";
 
 /** Titre du bandeau : le premier mot en blanc, la suite en bleu. */
@@ -26,9 +26,11 @@ export function sousTitre(d?: Donnees) {
  * Cadre commun : menu latéral (responsables seulement), bandeau photo, contenu.
  */
 export function Cadre({
-  d, actions, menu, onAide, etroit, children,
+  d, actions, menu, onAide, etroit, sousTitre: sous, children,
 }: {
   d?: Donnees;
+  /** Remplace la ligne sous le titre (ex. nom de l'équipe). */
+  sousTitre?: string;
   actions?: ReactNode;
   menu?: boolean;
   onAide?: () => void;
@@ -44,7 +46,6 @@ export function Cadre({
           <a href="#haut" aria-current="page"><Calendrier size={32} />Tournée</a>
           <a href="#equipes"><Groupe size={32} />Équipes</a>
           <a href="#secteurs"><Repere size={32} />Secteurs</a>
-          <a href="#progression"><Barres size={32} />Statistiques</a>
           <div className="espace" />
           <button type="button" onClick={onAide}><Aide size={30} />Aide</button>
         </nav>
@@ -56,7 +57,7 @@ export function Cadre({
           <div className="fondu" aria-hidden="true" />
           <div className="textes">
             <Titre texte={d?.config?.titre || "Tournée des calendriers"} />
-            <p>{sousTitre(d)}</p>
+            <p>{sous ?? sousTitre(d)}</p>
           </div>
           {actions && <div className="actions">{actions}</div>}
         </header>

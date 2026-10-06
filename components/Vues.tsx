@@ -148,14 +148,18 @@ const cadrer = (c: { lng: number; lat: number; zoom: number }) =>
 
 // ---------------------------------------------------------------- blocs de la colonne de droite
 
-function ListeSecteurs({ d, ruesDu, selection, onSelect }: {
+function ListeSecteurs({ d, ruesDu, selection, onSelect, onNouveau, dessinEnCours }: {
   d: Donnees; ruesDu: (id: string) => Rue[]; selection: string | null; onSelect: (id: string) => void;
+  onNouveau?: () => void; dessinEnCours?: boolean;
 }) {
   const couleur = (s: Secteur) => d.equipes.find((e) => e.id === s.equipe_id)?.couleur ?? GRIS;
   return (
     <section className="carte-blanche bloc" id="secteurs">
-      <h2>Secteurs</h2>
-      {!d.secteurs.length && <p className="hint" style={{ margin: 0 }}>Aucun secteur pour l&apos;instant.</p>}
+      <div className="bar" style={{ margin: "0 0 8px" }}>
+        <h2 className="grow" style={{ margin: 0 }}>Secteurs</h2>
+        {onNouveau && <button type="button" className="btn small" onClick={onNouveau} disabled={dessinEnCours}>+ Nouveau</button>}
+      </div>
+      {!d.secteurs.length && <p className="hint" style={{ margin: 0 }}>Aucun secteur pour l&apos;instant. « + Nouveau » pour en dessiner un sur la carte.</p>}
       <ul className="liste-secteurs">
         {d.secteurs.map((s) => {
           const rs = ruesDu(s.id);
@@ -176,32 +180,6 @@ function ListeSecteurs({ d, ruesDu, selection, onSelect }: {
           );
         })}
       </ul>
-    </section>
-  );
-}
-
-function Progression({ a, depart, rues }: { a: ReturnType<typeof agreger>; depart: number; rues: Rue[] }) {
-  const pct = depart ? Math.min(100, Math.round((a.vendus / depart) * 100)) : avancement(rues).pct;
-  const tour = 2 * Math.PI * 52;
-  return (
-    <section className="carte-blanche bloc" id="progression">
-      <h2>Progression globale</h2>
-      <div className="donut">
-        <div className="cercle">
-          <svg width="128" height="128" viewBox="0 0 128 128" aria-hidden="true">
-            <circle cx="64" cy="64" r="52" fill="none" stroke="#D7E6FA" strokeWidth="14" />
-            <circle cx="64" cy="64" r="52" fill="none" stroke="var(--done)" strokeWidth="14" strokeDasharray={`${(pct / 100) * tour} ${tour}`} transform="rotate(-90 64 64)" />
-          </svg>
-          <div className="centre"><b>{pct} %</b><span>{depart ? "vendus" : "terminé"}</span></div>
-        </div>
-        <ul className="legende">
-          <li><i style={{ background: "var(--done)" }} /><span>Vendus</span><b>{a.vendus}</b></li>
-          {depart > 0 && <li><i style={{ background: "#6FA8F2" }} /><span>Restants</span><b>{depart - a.vendus}</b></li>}
-          <li><i style={{ background: "var(--violet)" }} /><span>Rues faites</span><b>{a.faite}</b></li>
-          <li><i style={{ background: "var(--signal)" }} /><span>Commencées</span><b>{a.encours}</b></li>
-          <li><i style={{ background: "var(--repasser)" }} /><span>À repasser</span><b>{a.arepasser}</b></li>
-        </ul>
-      </div>
     </section>
   );
 }
@@ -248,6 +226,7 @@ export function VueEnsemble({ d, config, dessinDemande, onDessinActif, onReglage
 }) {
   const [ouvertes, setOuvertes] = useState<Set<string>>(new Set());
   const [exporter, setExport] = useState(false);
+  const [dessinEnCours, setDessinEnCours] = useState(false);
   const a = useActions(d, true, () => true);
   const reglages = useReglagesParcours();
   useTraces(d);
@@ -270,12 +249,13 @@ export function VueEnsemble({ d, config, dessinDemande, onDessinActif, onReglage
       <div className="zone-carte">
         <div className="gauche">
           <Carte config={config} equipes={d.equipes} secteurs={d.secteurs} rues={d.rues} selection={a.selection} onSelect={a.setSelection}
-            admin onDessin={a.onDessin} onCadrage={cadrer} dessinDemande={dessinDemande} onDessinActif={onDessinActif}
+            admin onDessin={a.onDessin} onCadrage={cadrer} dessinDemande={dessinDemande}
+            onDessinActif={(v) => { setDessinEnCours(v); onDessinActif(v); }}
             etapes={etapesCarte(d.secteurs.filter((s) => s.id === a.selection), a.ruesDu, reglages)}
             redessin={a.redessin} onRedessinFini={() => a.setRedessin(null)} />
           {choisi ? (
             <div className="card" id="detail-secteur">
-              <BlocSecteur secteur={choisi} rues={a.ruesDu(choisi.id)} equipe={equipe(choisi.equipe_id)} ville={config.ville} montrerEquipe actions={a.actions(choisi)} />
+              <BlocSecteur secteur={choisi} rues={a.ruesDu(choisi.id)} equipe={equipe(choisi.equipe_id)} ville={config.ville} montrerEquipe compact actions={a.actions(choisi)} />
             </div>
           ) : (
             <p className="hint" style={{ margin: 0 }}>
@@ -285,8 +265,8 @@ export function VueEnsemble({ d, config, dessinDemande, onDessinActif, onReglage
         </div>
         <div className="droite">
           {choisi && <ResumeSecteur secteur={choisi} rues={a.ruesDu(choisi.id)} equipe={equipe(choisi.equipe_id)} onFermer={() => a.setSelection(null)} />}
-          <ListeSecteurs d={d} ruesDu={a.ruesDu} selection={a.selection} onSelect={choisir} />
-          <Progression a={total} depart={depart} rues={d.rues} />
+          <ListeSecteurs d={d} ruesDu={a.ruesDu} selection={a.selection} onSelect={choisir}
+            onNouveau={onDessiner} dessinEnCours={dessinEnCours} />
         </div>
       </div>
 
@@ -467,7 +447,7 @@ export function VueEquipe({ d, config, equipeId, admin }: { d: Donnees; config: 
       ) : secs.length ? (
         secs.map((s) => (
           <div className="card" key={s.id} id={`secteur-${s.id}`}>
-            <BlocSecteur secteur={s} rues={a.ruesDu(s.id)} equipe={t} ville={config.ville} montrerEquipe={false} actions={a.actions(s)} />
+            <BlocSecteur secteur={s} rues={a.ruesDu(s.id)} equipe={t} ville={config.ville} montrerEquipe={false} compact actions={a.actions(s)} />
           </div>
         ))
       ) : (
